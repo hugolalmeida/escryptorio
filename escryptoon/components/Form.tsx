@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";  
 import styles from '../styles/Form.module.css';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -14,7 +13,7 @@ interface CryptoAsset {
 }
 
 const Form = () => {
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [cryptoAssets, setCryptoAssets] = useState<CryptoAsset[]>([
     { id: 1, coinName: '', quantity: '', walletAddress: '', exchange: '' }
   ]);
@@ -32,6 +31,7 @@ const Form = () => {
     cep: "",
     telefone: "",
     email: "",
+    anotacoesGerais: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,11 +65,19 @@ const Form = () => {
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
-    setCurrentStep(2);
+    if (currentStep === 1) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+    }
   };
 
   const handlePrevStep = () => {
-    setCurrentStep(1);
+    if (currentStep === 3) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(1);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -303,6 +311,33 @@ const Form = () => {
       </button>
 
       <div className={styles.buttonGroup}>
+      <button type="button" onClick={handlePrevStep} className={styles.prevButton}>
+          Voltar
+        </button>
+      <button type="button" onClick={handleNextStep} className={styles.nextButton}>
+        Próxima Etapa
+      </button>
+    </div>
+  </div>
+  );
+  const renderStep3 = () => (
+    <div className={styles.formStep}>
+      <h2>Anotações Gerais</h2>
+      
+      <div className={styles.formGroup}>
+        <label htmlFor="anotacoesGerais">Anotações</label>
+        <textarea
+          id="anotacoesGerais"
+          name="anotacoesGerais"
+          value={formData.anotacoesGerais}
+          onChange={(e) => setFormData({ ...formData, anotacoesGerais: e.target.value })}
+          className={styles.textarea}
+          rows={6}
+          placeholder="Digite suas anotações aqui..."
+        />
+      </div>
+  
+      <div className={styles.buttonGroup}>
         <button type="button" onClick={handlePrevStep} className={styles.prevButton}>
           Voltar
         </button>
@@ -312,7 +347,6 @@ const Form = () => {
       </div>
     </div>
   );
-
   return (
     <div className={styles.formContainer}>
       <h1 className={styles.mainTitle}>Ficha de Levantamento de Criptoativos</h1>
@@ -320,12 +354,14 @@ const Form = () => {
       <div className={styles.progressBar}>
         <div 
           className={styles.progress}
-          style={{ width: currentStep === 1 ? '50%' : '100%' }}
+          style={{ width: `${(currentStep / 3) * 100}%` }}
         />
       </div>
-
+  
       <form onSubmit={handleSubmit} className={styles.form}>
-        {currentStep === 1 ? renderStep1() : renderStep2()}
+        {currentStep === 1 && renderStep1()}
+        {currentStep === 2 && renderStep2()}
+        {currentStep === 3 && renderStep3()}
       </form>
     </div>
   );

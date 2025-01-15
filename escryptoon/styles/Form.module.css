@@ -168,6 +168,21 @@
     color: #444;
   }
   
+  .textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: inherit;
+    min-height: 150px;
+  }
+  
+  .textarea:focus {
+    outline: none;
+    border-color: #0070f3;
+    box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.2);
+  }
   @keyframes fadeIn {
     from {
       opacity: 0;
