@@ -17,6 +17,7 @@ const Form = () => {
   const [cryptoAssets, setCryptoAssets] = useState<CryptoAsset[]>([
     { id: 1, coinName: '', quantity: '', walletAddress: '', exchange: '' }
   ]);
+  const [showSuccess, setShowSuccess] = useState(false);
   
   const [formData, setFormData] = useState({
     // Dados Pessoais
@@ -34,6 +35,32 @@ const Form = () => {
     anotacoesGerais: "",
   });
 
+  const resetForm = () => {
+    setFormData({
+      nomeCompleto: "",
+      cpfCnpj: "",
+      rua: "",
+      numero: "",
+      complemento: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+      cep: "",
+      telefone: "",
+      email: "",
+      anotacoesGerais: "",
+    });
+    setCryptoAssets([{ 
+      id: 1, 
+      coinName: '', 
+      quantity: '', 
+      walletAddress: '', 
+      exchange: '' 
+    }]);
+    setCurrentStep(1);
+    setShowSuccess(false);
+  };
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -86,16 +113,22 @@ const Form = () => {
       ...formData,
       cryptoAssets
     };
-
-    const response = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(completeData),
-    });
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, "_blank");
+  
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(completeData),
+      });
+  
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      // Opcional: adicione tratamento de erro aqui
+    }
   };
 
   const renderStep1 = () => (
@@ -358,11 +391,26 @@ const Form = () => {
         />
       </div>
   
-      <form onSubmit={handleSubmit} className={styles.form}>
-        {currentStep === 1 && renderStep1()}
-        {currentStep === 2 && renderStep2()}
-        {currentStep === 3 && renderStep3()}
-      </form>
+      {!showSuccess ? (
+        <form onSubmit={handleSubmit} className={styles.form}>
+          {currentStep === 1 && renderStep1()}
+          {currentStep === 2 && renderStep2()}
+          {currentStep === 3 && renderStep3()}
+        </form>
+      ) : (
+        <div className={styles.successContainer}>
+          <div className={styles.successMessage}>
+            <h2>PDF Gerado com Sucesso!</h2>
+            <p>Seu PDF foi gerado e aberto em uma nova aba.</p>
+            <button 
+              onClick={resetForm} 
+              className={styles.resetButton}
+            >
+              Preencher Novo Formulário
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
