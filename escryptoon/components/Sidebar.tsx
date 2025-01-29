@@ -27,8 +27,8 @@ const Sidebar = () => {
       icon: FileText
     },
     {
-      path: '/sobre',
-      name: 'Sobre',
+      path: '/criptoAtivos',
+      name: 'Cryptoons',
       icon: Building2
     },
   ];

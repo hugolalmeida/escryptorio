@@ -1,0 +1,59 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env.DATABASE_URL
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  BASIC
+  PREMIUM
+  ADMIN
+}
+
+enum DocumentType {
+  CONTRACT
+  KEY
+}
+
+enum DocumentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String
+  name          String?
+  role          UserRole       @default(BASIC)
+  generationLogs GenerationLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model GenerationLog {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  documentType  DocumentType
+  fileName      String
+  status        DocumentStatus @default(PENDING)
+  generatedAt   DateTime       @default(now())
+  error         String?        // Para armazenar mensagens de erro se houver falha
+  metadata      Json?          // Para dados adicionais flexíveis
+}
+
+model Cryptocurrency {
+  id            String   @id @default(cuid())
+  symbol        String   @unique
+  name          String
+  currentPrice  Float?
+  lastUpdated   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
