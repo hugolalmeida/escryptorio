@@ -11,7 +11,7 @@ export const useSupabaseTest = () => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
 
-  const testConnection = async () => {
+  const testConnection = async (id: string) => {
     setIsLoading(true);
     setError(null);
     setResult(null);
