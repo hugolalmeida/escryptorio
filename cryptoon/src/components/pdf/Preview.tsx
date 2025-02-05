@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { PDFViewer } from '@react-pdf/renderer';
-import CryptoDocument from './templates/ContractTemplate';
+import ContractTemplate from './templates/ContractTemplate';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -20,7 +20,7 @@ const PDFPreview = ({ data, onDownload, onClose }) => {
       </div>
       
       <PDFViewer className="w-full h-[calc(100vh-200px)]">
-        <CryptoDocument data={data} />
+        <ContractTemplate data={data} />
       </PDFViewer>
     </Card>
   );
