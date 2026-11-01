@@ -1,0 +1,14 @@
+{
+  "name": "escryptorio",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["apps/web"],
+  "scripts": {
+    "dev": "npm run dev --workspace @cryptolab/web",
+    "build": "npm run build --workspace @cryptolab/web",
+    "typecheck": "npm run typecheck --workspace @cryptolab/web",
+    "test:ui": "playwright test",
+    "start": "npm run start --workspace @cryptolab/web"
+  },
+  "devDependencies": {"@playwright/test": "^1.56.1"}
+}

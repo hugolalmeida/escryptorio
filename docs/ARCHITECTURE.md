@@ -1,0 +1,98 @@
+# Arquitetura · CryptoLab
+
+Decisão de 01/11/2026. Aplicação local Windows, usuário único, somente Bybit Spot. Esta entrega cobre scaffold, design system, dashboard, coleta pública e indicadores básicos; as fases posteriores estão especificadas abaixo.
+
+```mermaid
+flowchart LR
+  B[Bybit API pública GET] --> W[Worker Python / Pybit]
+  W --> E[Motor puro Decimal]
+  W --> D[(SQLite WAL)]
+  D --> A[FastAPI em loopback]
+  A --> N[Next.js proxy de servidor]
+  N --> U[Dashboard / Lightweight Charts]
+```
+
+## Pastas e fronteiras
+
+```text
+apps/web/
+  src/app/                 App Router, CSS e proxy GET local
+  src/components/          shell, dashboard e gráfico
+  src/components/ui/       primitives shadcn/ui editáveis
+  src/hooks/               polling e tratamento de erros
+  src/lib/                 contrato e formatação
+backend/
+  cryptolab/api.py         consultas locais, validação e estado de segurança
+  cryptolab/worker.py      coletor independente, periódico ou --once
+  cryptolab/bybit.py       fronteira pública Spot com SDK sem chaves
+  cryptolab/engine/        indicadores puros; expansão futura das estratégias
+  cryptolab/storage.py     transactions, snapshots e datasets
+  cryptolab/migrations/    SQL incremental versionado
+  tests/                   referência matemática, temporalidade, API e segurança
+tests/ui/                  Playwright offline + smoke real opcional
+scripts/dev.ps1            inicia processos locais e encerra os que criou
+docs/                      decisões, roteiro, design e evidências
+data/                      banco local ignorado pelo Git
+```
+
+Não reutilizar os projetos legados `cryptoon` e `escryptoon`: já estavam ausentes e com exclusões no Git antes desta tarefa. Essas alterações foram preservadas.
+
+## Contrato de mercado e persistência
+
+Endpoint: `GET /api/v1/market?symbol=BTCUSDT&interval=60`. Somente dois símbolos e intervalos `15`, `60`, `240`, `D`. `GET /health` informa bloqueio de live trading e estado do worker. Não há rotas privadas ou de mutação de negócio.
+
+O worker chama `get_tickers`, `get_kline` e `get_instruments_info` com `category=spot` explícito. Isso é obrigatório: o endpoint de candles usa outro mercado por padrão. A resposta Bybit vem em ordem reversa e é normalizada em ordem crescente. Fechamento é `abertura + intervalo <= relógio da Bybit`. A lista é validada antes de calcular indicadores. [Contrato oficial de candles](https://bybit-exchange.github.io/docs/v5/market/kline).
+
+Cada payload mantém `source_time_ms` (menor horário entre ticker e candles), `fetched_at_ms`, ticker com horário próprio e instrumento com horário próprio. A idade é calculada novamente na API e no navegador. Relógio mais de 5s no futuro ou idade acima de 90s implica obsolescência. Um clique em Atualizar relê o banco, sem transformar dado antigo em novo. Falha no navegador também marca o snapshot mantido como indisponível/obsoleto.
+
+As especificações de instrumento são obtidas da API e não hardcoded. Seus valores não constituem autorização de ordem. [Especificações Bybit](https://bybit-exchange.github.io/docs/v5/market/instrument).
+
+SQLite usa WAL e `busy_timeout` via conexão, migrations sob `BEGIN IMMEDIATE`, commit/rollback e queries parametrizadas. `snapshots` guarda somente a última janela por símbolo/período. `datasets` guarda conteúdo fechado, JSON canônico com versão, mercado, símbolo e período; chave SHA-256. Inserção ignora hash existente, mantendo dataset imutável. O candle em formação pertence ao snapshot visual, nunca ao dataset fechado. Sem retenção automática nesta entrega. As janelas de 300 candles são observações iniciais, não um histórico suficiente para pesquisa extensa. Paginação e inventário de datasets serão adicionados antes dos backtests.
+
+## Motor e fórmulas
+
+Valores financeiros são Decimal em contexto local de 34 dígitos; serialização JSON como strings. `float` é permitido somente na apresentação. SMA: média dos últimos N fechamentos. EMA: semente SMA dos primeiros N; alpha=2/(N+1). RSI de Wilder: média inicial de N ganhos/perdas, atualização `(anterior*(N−1)+atual)/N`; mercado constante retorna 50, somente ganhos 100, somente perdas 0. ATR: primeiro TR=high−low; demais TR incluem gaps para fechamento anterior; semente média de N e suavização de Wilder. Warm-up retorna ausente, não zero.
+
+Tendência é descritiva: alta se fechamento>SMA20>EMA50; baixa se fechamento<SMA20<EMA50; neutra nos demais casos. Não equivale a estratégia Trend validada nem gera entrada. Indicadores não usam o candle aberto e têm testes de invariância de prefixo.
+
+## Plano incremental e aceite
+
+| Fase | Entrega | Estado |
+| --- | --- | --- |
+| 1 | Inspeção, AGENTS, arquitetura e avaliação das referências | Implementada |
+| 2 | Design system, dashboard, estados e responsividade | Implementada |
+| 3 | Bybit pública, persistência, candles e timestamp real | Implementada |
+| 4 | Estratégias, sinais e backtest com dados versionados | Planejada; indicadores básicos entregues |
+| 5 | Arena com custos equivalentes e paper trading persistente | Planejada |
+| 6 | Permissões, elegibilidade, carteira e ordens somente leitura | Planejada; nenhuma credencial solicitada |
+| 7 | Verificação progressiva do motor, segurança e UI | Base implementada; expandir nas próximas fases |
+
+### Fase 4: protocolo de pesquisa
+
+Definir objetos `Strategy`, `SignalPlan`, `BacktestConfig`, `Fill`, `RunManifest` e `Metrics`. Estratégias long-only: Trend (cruzamento de médias), RSI (limiares de reversão), Breakout (máximo dos N candles anteriores, excluindo o candle de decisão) e Buy & Hold (baseline com mesmos custos). Parâmetros e regras de saída devem ser fixados e documentados antes da implementação. Mack não participa de ranking ou sinais enquanto não especificada e validada.
+
+Manifesto: hash e intervalo do dataset, versão da estratégia, commit do código, dependências fixadas, parâmetros, precisão, política de fills e custos, capital inicial, datas de treino/validação/teste. Não usar relógio atual dentro de um replay. Seed fixa se algum modelo futuro exigir aleatoriedade.
+
+Separação cronológica: escolher parâmetros no treino, comparar na validação e congelar antes do teste. Histórico anterior pode alimentar warm-up causal sem gerar fills no período anterior. Nenhum ajuste após olhar teste; manter testes de prefixo, dados com gaps, amostras adversas e lookahead analysis cruzada. Cada resultado deve indicar amostra e tamanho, sem confundir indicador causal com estratégia rentável.
+
+Decisão no fechamento t; fill mais cedo na abertura t+1 com slippage adverso e taxa por lado. Stop e alvo no mesmo candle: política conservadora (stop primeiro), registrada no manifesto. Gap não preenche a preço impossível. Impor precisões, mínimos e máximos da versão de instrumento usada no replay. Não permitir saldo negativo. Custos configuráveis não são taxas efetivas verificadas da conta.
+
+Métricas: retorno líquido sobre capital inicial, drawdown de equity marcada a mercado, profit factor (lucro bruto/perda bruta absoluta), acerto, expectativa média por trade fechado, quantidade de trades e equity temporal. Divisão por zero gera ausente/infinito representado explicitamente, nunca valor enganoso. Buy & Hold e posições abertas precisam de política comum para marcação/liquidação final com custos.
+
+### Fase 5: Arena e paper
+
+Uma conta virtual independente por estratégia, mesmo capital e mesmas condições. Ledger Decimal e transações atômicas; ordens virtuais com chave de idempotência, sequência do evento e versão de dado. Preenchimentos parciais, custos, saldo, PnL e histórico persistidos. Parada e reinício não duplicam fills. Reconciliação é local, sem conexão a endpoints de trade. Recusar sinais vencidos ou dados antigos. Comparação inclui período fora da amostra destacado e condições da simulação.
+
+### Fase 6: conta privada somente leitura
+
+Não há integração privada nesta entrega. Antes de consultar carteira, validar `readOnly`, permissões efetivas, restrições de IP, validade da chave, tipo de conta e elegibilidade do usuário. Rejeitar configurações ambíguas e credenciais com escrita/saque. A API de informações da chave é uma fonte, não comprovação de elegibilidade regional. [Bybit API Key Information](https://bybit-exchange.github.io/docs/v5/user/apikey-info).
+
+Preferir Windows Credential Manager e segredos apenas em memória do backend; não armazenar em SQLite, frontend ou logs. Expor saldo e ordens por DTOs mínimos e sanitizados. Não supor capacidades de unified account ou stops Spot sem verificar documentação vigente, conta e produto.
+
+### Execução futura: permanece ausente
+
+Requer nova autorização explícita e revisão de arquitetura. Um módulo separado deve controlar: proposta vinculada a snapshot, validade e aprovação humana; nonce/ID idempotente por intenção; precisão e limites; máquina de estados para aceitação, fills parciais, rejeição e cancelamento; stops cuja disponibilidade seja verificada; reconciliação após timeout/reinício; auditoria com retenção e sem segredos; kill switch e exposição máxima. Se a consulta de permissão ou reconciliação falhar, bloquear novas ordens. Aprovação humana nunca é inferida de um sinal. Não conectar Freqtrade live ao app.
+
+## Limites operacionais
+
+Uso privado em loopback, sem autenticação multiusuário; não publicar. API não habilita CORS amplo e valida Host. Proteção adicional e autenticação seriam necessárias antes de qualquer exposição remota. SQLite em OneDrive funciona no ensaio local, mas para coleta contínua mover o banco para disco local não sincronizado por variável de ambiente, igual em API e worker. Um processo worker por banco; não há lock de líder nesta entrega. Backup deve usar mecanismo SQLite consistente, não copiar apenas arquivo `.sqlite3` durante escrita WAL.
