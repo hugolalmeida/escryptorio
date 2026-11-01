@@ -22,6 +22,7 @@ class Store:
     def connect(self):
         connection = sqlite3.connect(self.path, timeout=10)
         connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys=ON")
         try:
             yield connection
             connection.commit()
@@ -41,9 +42,14 @@ class Store:
             db.execute("BEGIN IMMEDIATE")
             for file in sorted((Path(__file__).parent / "migrations").glob("*.sql")):
                 if not db.execute("SELECT 1 FROM schema_migrations WHERE version=?", (file.stem,)).fetchone():
-                    for statement in file.read_text(encoding="utf-8").split(";"):
-                        if statement.strip():
+                    statement = ""
+                    for line in file.read_text(encoding="utf-8").splitlines(keepends=True):
+                        statement += line
+                        if sqlite3.complete_statement(statement):
                             db.execute(statement)
+                            statement = ""
+                    if statement.strip():
+                        raise ValueError(f"Migration incompleta: {file.name}")
                     db.execute("INSERT INTO schema_migrations VALUES (?)", (file.stem,))
 
     def save(self, snapshot: Snapshot):

@@ -23,14 +23,16 @@ if (-not $SkipInstall) {
 $env:LIVE_TRADING_ENABLED = 'false'
 $apiProcess = $null
 $workerProcess = $null
+$historyProcess = $null
 try {
     $apiProcess = Start-Process -FilePath $pythonExe -ArgumentList @('-m','uvicorn','cryptolab.api:app','--host','127.0.0.1','--port','8000') -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru
     $workerProcess = Start-Process -FilePath $pythonExe -ArgumentList @('-m','cryptolab.worker') -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru
+    $historyProcess = Start-Process -FilePath $pythonExe -ArgumentList @('-m','cryptolab.history.worker') -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru
     Write-Host 'CryptoLab: http://127.0.0.1:3100 | API: http://127.0.0.1:8000/docs'
     Write-Host 'A coleta inicial pode levar alguns segundos. Ctrl+C encerra os processos iniciados aqui.'
     & npm run dev
 } finally {
-    foreach ($ownedProcess in @($apiProcess, $workerProcess)) {
+    foreach ($ownedProcess in @($apiProcess, $workerProcess, $historyProcess)) {
         if ($ownedProcess -and -not $ownedProcess.HasExited) { Stop-Process -Id $ownedProcess.Id -ErrorAction SilentlyContinue }
     }
 }

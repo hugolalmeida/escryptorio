@@ -1,6 +1,6 @@
 # Arquitetura · CryptoLab
 
-Decisão de 01/11/2026. Aplicação local Windows, usuário único, somente Bybit Spot. Esta entrega cobre scaffold, design system, dashboard, coleta pública e indicadores básicos; as fases posteriores estão especificadas abaixo.
+Decisão de 01/11/2026, atualizada na Fase 2.1. Aplicação local Windows, usuário único, somente Bybit Spot. A base cobre scaffold, design system, dashboard, coleta pública e indicadores básicos; a Fase 2.1 acrescenta arquivo histórico incremental e datasets aprovados. As fases posteriores estão especificadas abaixo.
 
 ```mermaid
 flowchart LR
@@ -39,7 +39,7 @@ Não reutilizar os projetos legados `cryptoon` e `escryptoon`: já estavam ausen
 
 ## Contrato de mercado e persistência
 
-Endpoint: `GET /api/v1/market?symbol=BTCUSDT&interval=60`. Somente dois símbolos e intervalos `15`, `60`, `240`, `D`. `GET /health` informa bloqueio de live trading e estado do worker. Não há rotas privadas ou de mutação de negócio.
+Endpoint: `GET /api/v1/market?symbol=BTCUSDT&interval=60`. Somente dois símbolos e intervalos `15`, `60`, `240`, `D`. `GET /health` informa bloqueio de live trading e estado do worker. As novas rotas `/api/v1/history` permitem consultas e enfileiramento/pausa/retomada de pesquisa local. Não há rotas privadas ou de execução de trades.
 
 O worker chama `get_tickers`, `get_kline` e `get_instruments_info` com `category=spot` explícito. Isso é obrigatório: o endpoint de candles usa outro mercado por padrão. A resposta Bybit vem em ordem reversa e é normalizada em ordem crescente. Fechamento é `abertura + intervalo <= relógio da Bybit`. A lista é validada antes de calcular indicadores. [Contrato oficial de candles](https://bybit-exchange.github.io/docs/v5/market/kline).
 
@@ -47,7 +47,9 @@ Cada payload mantém `source_time_ms` (menor horário entre ticker e candles), `
 
 As especificações de instrumento são obtidas da API e não hardcoded. Seus valores não constituem autorização de ordem. [Especificações Bybit](https://bybit-exchange.github.io/docs/v5/market/instrument).
 
-SQLite usa WAL e `busy_timeout` via conexão, migrations sob `BEGIN IMMEDIATE`, commit/rollback e queries parametrizadas. `snapshots` guarda somente a última janela por símbolo/período. `datasets` guarda conteúdo fechado, JSON canônico com versão, mercado, símbolo e período; chave SHA-256. Inserção ignora hash existente, mantendo dataset imutável. O candle em formação pertence ao snapshot visual, nunca ao dataset fechado. Sem retenção automática nesta entrega. As janelas de 300 candles são observações iniciais, não um histórico suficiente para pesquisa extensa. Paginação e inventário de datasets serão adicionados antes dos backtests.
+SQLite usa WAL e `busy_timeout` via conexão, migrations sob `BEGIN IMMEDIATE`, commit/rollback e queries parametrizadas. `snapshots` guarda somente a última janela por símbolo/período. `datasets` guarda conteúdo fechado das janelas do dashboard, JSON canônico com versão, mercado, símbolo e período; chave SHA-256. O candle em formação pertence ao snapshot visual, nunca ao conteúdo fechado. Sem retenção automática nesta entrega. Essas janelas de 300 candles não são promovidas a dados históricos aprovados.
+
+Na Fase 2.1, `historical_candles` armazena OHLCV incremental com chave por exchange, mercado, ativo, timeframe e abertura; `historical_datasets` guarda payload e manifesto aprovados, protegidos por triggers. Jobs, runs, páginas e lacunas são rastreáveis em tabelas próprias. Um worker histórico independente usa lease persistido, coleta somente faixas ausentes e aprova apenas cobertura completa. `DatasetReader` verifica hash, manifesto e recorte sem rede. A API continua sem fazer coleta; POSTs de histórico apenas controlam a fila local com validação de origem/intenção. Detalhes, comandos e cobertura real em [HISTORY.md](HISTORY.md).
 
 ## Motor e fórmulas
 
@@ -62,6 +64,8 @@ Tendência é descritiva: alta se fechamento>SMA20>EMA50; baixa se fechamento<SM
 | 1 | Inspeção, AGENTS, arquitetura e avaliação das referências | Implementada |
 | 2 | Design system, dashboard, estados e responsividade | Implementada |
 | 3 | Bybit pública, persistência, candles e timestamp real | Implementada |
+| 2.1 | Histórico paginado, retomada, arquivo incremental e catálogo aprovado | Implementada; 5.475 candles únicos reais nas faixas documentadas |
+| 2.2 | Estratégias e backtesting sobre reader offline aprovado | Plano em [PHASE_2_2.md](PHASE_2_2.md); sem estratégias nesta entrega |
 | 4 | Estratégias, sinais e backtest com dados versionados | Planejada; indicadores básicos entregues |
 | 5 | Arena com custos equivalentes e paper trading persistente | Planejada |
 | 6 | Permissões, elegibilidade, carteira e ordens somente leitura | Planejada; nenhuma credencial solicitada |
@@ -95,4 +99,4 @@ Requer nova autorização explícita e revisão de arquitetura. Um módulo separ
 
 ## Limites operacionais
 
-Uso privado em loopback, sem autenticação multiusuário; não publicar. API não habilita CORS amplo e valida Host. Proteção adicional e autenticação seriam necessárias antes de qualquer exposição remota. SQLite em OneDrive funciona no ensaio local, mas para coleta contínua mover o banco para disco local não sincronizado por variável de ambiente, igual em API e worker. Um processo worker por banco; não há lock de líder nesta entrega. Backup deve usar mecanismo SQLite consistente, não copiar apenas arquivo `.sqlite3` durante escrita WAL.
+Uso privado em loopback, sem autenticação multiusuário; não publicar. API não habilita CORS amplo e valida Host. Proteção adicional e autenticação seriam necessárias antes de qualquer exposição remota. SQLite em OneDrive funciona no ensaio local, mas para coleta contínua mover o banco para disco local não sincronizado por variável de ambiente, igual em API e nos workers. Executar um worker de snapshots por banco; esse coletor original não tem lock de líder. O histórico tem um lease global próprio para serializar CLI/worker histórico, sem bloquear o coletor do dashboard. Backup deve usar mecanismo SQLite consistente, não copiar apenas arquivo `.sqlite3` durante escrita WAL.

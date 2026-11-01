@@ -15,8 +15,11 @@ Aplicação privada, local, usuário único, exclusivamente Bybit Spot BTCUSDT e
 
 ## Organização
 - `apps/web`: Next.js, TypeScript, Tailwind, componentes shadcn/ui e Lightweight Charts.
-- `backend/cryptolab/api.py`: FastAPI; somente leitura do banco; não faz coleta de rede.
-- `backend/cryptolab/worker.py`: processo de coleta pública Pybit, único escritor de dados de mercado.
+- `backend/cryptolab/api.py`: FastAPI; consultas e fila local de pesquisa histórica; não faz coleta de rede.
+- `backend/cryptolab/worker.py`: processo de coleta pública Pybit para snapshots do dashboard.
+- `backend/cryptolab/history`: coletor, CLI e worker próprios; histórico separado dos snapshots, sem estratégias.
+- Mutações HTTP de histórico apenas enfileiram/pausam/retomam pesquisa local e exigem cabeçalho `X-CryptoLab-Research: 1`. Nunca são endpoints de execução de trades.
+- Histórico usa intervalos UTC `[início, fim)`, sem preenchimento de lacunas; aprovar somente cobertura de 100%. Nunca sobrescrever candles conflitantes ou datasets aprovados.
 - `backend/cryptolab/engine`: funções puras, independentes de API/SDK/persistência.
 - `backend/cryptolab/migrations`: migrations SQL incrementais e transacionais.
 - `docs`: arquitetura, decisões, desenho, roteiro e verificações.

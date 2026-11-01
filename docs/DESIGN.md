@@ -41,4 +41,6 @@ Carregamento, erro inicial, atualização interrompida, snapshot antigo e relóg
 
 ## Próximos refinamentos
 
+Na Fase 2.1, a nova página `/history` reutiliza shell, tokens, botão, tabelas e estados do produto. Foram adicionados somente estilos com escopo `.history-*`, preservando o dashboard. O formulário usa limites UTC explícitos; a cobertura tem contagem, percentual, faixas ausentes e segmentos na API. Jobs permitem pausa/retomada; o catálogo verifica o hash antes da prévia OHLCV. A aprovação depende de cobertura completa, sem qualquer resultado de estratégia. Desktop usa formulário em quatro colunas, tablet duas e celular coloca os limites em linhas próprias; tabelas têm rolagem interna. Capturas reais dos três tamanhos foram inspecionadas e a suíte de regressão do dashboard passou.
+
 Ao implementar Arena e paper, preservar cores e densidade, testar nomes longos e retornos extremos. Adicionar alternativa tabular acessível completa ao gráfico caso pesquisa exija inspeção detalhada sem canvas. Validar com leitor de tela antes de ampliar público. A entrega atual foi verificada por teclado, semântica e navegador; não certifica conformidade WCAG integral.

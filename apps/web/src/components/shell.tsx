@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 
 const navigation = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/history", label: "Dados históricos", icon: BookOpen },
   { href: "/arena", label: "Arena", icon: Swords },
   { href: "/backtesting", label: "Backtesting", icon: FlaskConical },
   { href: "/signals", label: "Sinais", icon: Workflow },

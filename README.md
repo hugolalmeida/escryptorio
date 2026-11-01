@@ -1,6 +1,6 @@
 # Escryptorio · CryptoLab
 
-Workspace privado de pesquisa de criptomoedas. Primeira entrega: dashboard local, dados públicos reais da Bybit Spot, indicadores determinísticos e snapshots versionados. BTCUSDT e ETHUSDT; sem credenciais, margem, empréstimo, alavancagem ou ordens reais.
+Workspace privado de pesquisa de criptomoedas. Dashboard local, dados públicos reais da Bybit Spot, indicadores determinísticos, snapshots versionados e histórico de pesquisa com coleta retomável. BTCUSDT e ETHUSDT; sem credenciais, margem, empréstimo, alavancagem ou ordens reais.
 
 ## Iniciar no Windows
 
@@ -10,7 +10,7 @@ Requisitos: Node.js 22+, npm, Python 3.10+ 64 bits e acesso HTTPS à Bybit. Na r
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1
 ```
 
-O script instala as dependências locais, inicia API e worker em segundo plano e abre o servidor Next no terminal. Acesse **http://127.0.0.1:3100**. A API fica em **http://127.0.0.1:8000/docs**. A porta 3000 não é usada, pois já havia outra aplicação local nela. Após a primeira instalação, use `-SkipInstall`. Ctrl+C encerra os processos API e worker iniciados pelo script.
+O script instala as dependências locais, inicia API, worker do dashboard e worker histórico em segundo plano e abre o servidor Next no terminal. Acesse **http://127.0.0.1:3100** e **http://127.0.0.1:3100/history**. A API fica em **http://127.0.0.1:8000/docs**. A porta 3000 não é usada, pois já havia outra aplicação local nela. Após a primeira instalação, use `-SkipInstall`. Ctrl+C encerra os três processos Python iniciados pelo script. Se já houver uma instância da fase anterior, reinicie-a para carregar as novas rotas e o worker histórico.
 
 Não é preciso criar `.env` nem informar chaves. `.env.example` documenta as opções. Python lê variáveis de ambiente do processo (não carrega `.env` automaticamente); Next lê `apps/web/.env.local`. Nunca use `NEXT_PUBLIC_*` para configuração privada. O script fixa `LIVE_TRADING_ENABLED=false`.
 
@@ -25,14 +25,16 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --no-deps -e ./backend
 ```
 
-Em três terminais, a partir da raiz:
+Em quatro terminais, a partir da raiz:
 
 ```powershell
 # Terminal 1 · API
 .\.venv\Scripts\python.exe -m uvicorn cryptolab.api:app --host 127.0.0.1 --port 8000
 # Terminal 2 · worker
 .\.venv\Scripts\python.exe -m cryptolab.worker
-# Terminal 3 · frontend
+# Terminal 3 · worker histórico, separado da atualização do dashboard
+.\.venv\Scripts\python.exe -m cryptolab.history.worker
+# Terminal 4 · frontend
 npm run dev
 ```
 
@@ -50,8 +52,40 @@ Para produção local: `npm run build`, depois `npm start`, mantendo API e worke
 - Validação de OHLC, lacunas, duplicatas, ordenação, alinhamento temporal, dados antigos e não finitos.
 - Falhas preservam o último snapshot e seu horário original. Após 90s ele é marcado obsoleto. Nenhum fallback fictício.
 - Especificações públicas de instrumento (precisão, mínimos e limites) persistidas para uso em módulos futuros.
+- Página **Dados históricos**: ativo/timeframe, período UTC, solicitação de coleta, progresso, pausa/retomada, cobertura, lacunas, catálogo e verificação de datasets.
+- Backfill paginado até 1.000 candles por chamada, arquivo incremental sem duplicação, retries limitados, lease persistido e retomada somente das faixas ausentes.
+- Datasets históricos aprovados com 100% de cobertura, SHA-256, manifesto e proteção SQL contra alteração; leitor offline para o futuro motor quantitativo. Snapshots do dashboard permanecem separados.
 
 Arena, backtesting, sinais operacionais, paper trading e carteira privada têm páginas de escopo e **ainda não executam suas funções**. Mack permanece não validada. Não há rota de ordem, cliente autenticado ou toggle para ativar trading. Os testes atuais comprovam causalidade dos indicadores; ainda não existe backtest a validar.
+
+## Histórico de pesquisa · Fase 2.1
+
+Períodos são **`[início, fim)` em UTC**, alinhados ao timeframe. Datas simples significam meia-noite UTC; horários exigem offset (`Z` ou `-03:00`). A interface recebe horários em UTC, independentemente do fuso do Windows. Limite de 100.000 candles por solicitação; divida períodos maiores.
+
+Coletar pelo PowerShell, a partir da raiz, sem precisar manter o worker histórico aberto:
+
+```powershell
+.\.venv\Scripts\python.exe -m cryptolab.history.cli collect --symbol BTCUSDT --interval 60 --start 2026-09-01 --end 2026-11-01
+```
+
+O comando mostra ID, candles confirmados, páginas e JSON final. Ctrl+C pausa com segurança; **repita o mesmo comando para retomar**. Jobs já concluídos retornam o mesmo dataset sem novas chamadas de rede. Se outro coletor detiver o lease, o job fica persistido na fila para o worker; código de saída 2 informa que não houve conclusão nesta execução. Após encerramento abrupto, o lease expira em até 120s e uma nova tentativa pode recuperar o job.
+
+Consultar cobertura e catálogo sem acessar a corretora:
+
+```powershell
+.\.venv\Scripts\python.exe -m cryptolab.history.cli coverage --symbol BTCUSDT --interval 60 --start 2026-09-01 --end 2026-11-01
+.\.venv\Scripts\python.exe -m cryptolab.history.cli datasets
+```
+
+Consulta offline real de três candles do dataset BTCUSDT criado nesta entrega:
+
+```powershell
+.\.venv\Scripts\python.exe -m cryptolab.history.cli read --dataset f3b2e55b1cc373d448efa3676c63064cb482c86be4ebd7442bce573134f972c6 --start 2026-09-01 --end 2026-09-01T03:00:00Z
+```
+
+Esse hash existe no banco local usado na verificação; uma instalação nova precisa coletar ou receber um backup consistente do banco. `read` valida o dataset completo antes de recortar. `reference_hash` continua referindo-se ao dataset completo; não é um hash do JSON de saída nem do recorte. O motor Python pode usar `DatasetReader.read(hash, start_time, end_time)` para obter uma tupla OHLCV Decimal, manifesto e hash, sem rede.
+
+Cobertura real obtida em 01/11/2026: **5.475 candles únicos**, quatro séries completas: BTCUSDT 1h e 4h entre 01/09 e 01/11/2026; ETHUSDT 15m entre 01/10 e 01/11/2026; ETHUSDT 1d entre 01/01/2025 e 01/11/2026. Os limites finais são exclusivos. Um quinto dataset de 24 candles BTCUSDT foi aprovado por reutilização do arquivo, sem aumentar esse total. Hashes e evidências estão em [docs/HISTORY.md](docs/HISTORY.md).
 
 ## Verificação
 
@@ -67,10 +101,13 @@ Playwright inicia um servidor de produção exclusivo na porta 3100 (deixe-a liv
 
 ```powershell
 $env:CRYPTOLAB_LIVE_SMOKE = '1'
+$env:CRYPTOLAB_HISTORY_SMOKE = '1' # opcional: requer o backfill BTC acima e worker histórico ativo
 npm run test:ui
 ```
 
-Capturas reais ficam em `artifacts/dashboard-{desktop,tablet,mobile}.png`, relatório em `playwright-report/`. Ambas as pastas são ignoradas pelo Git. O Playwright MCP não está disponível nesta sessão; a validação usa o runner Playwright/Chromium local.
+Capturas reais ficam em `artifacts/dashboard-{desktop,tablet,mobile}.png` e `artifacts/history-{desktop,tablet,mobile}.png`, relatório em `playwright-report/`. Ambas as pastas são ignoradas pelo Git. O Playwright MCP não está disponível nesta sessão; a validação usa o runner Playwright/Chromium local. Sem flags de smoke, os testes não consultam a Bybit nem exigem backend.
+
+Para preservar instâncias já abertas durante QA, é possível usar um backend próprio em outra porta de loopback e definir `$env:BACKEND_URL='http://127.0.0.1:18000'` e `$env:CRYPTOLAB_TEST_PORT='13100'` antes do Playwright. O runner continua exigindo servidor próprio e não reutiliza nem encerra processos existentes. As proteções de Host, origem, mercado e credenciais permanecem iguais.
 
 ## Diagnóstico
 
@@ -81,7 +118,10 @@ Capturas reais ficam em `artifacts/dashboard-{desktop,tablet,mobile}.png`, relat
 | Bybit indisponível | O worker registra um código sanitizado e tenta no próximo ciclo; não troca domínio nem contorna restrições regionais. |
 | Porta ocupada | Encerre apenas a instância correspondente; scripts/testes não matam processos de outros projetos. |
 | Banco lento | O banco padrão está em `data/`, dentro deste workspace OneDrive. Para uso contínuo, configure `CRYPTOLAB_DATABASE` fora de pasta sincronizada em ambos os processos. |
+| Histórico na fila | Inicie `python -m cryptolab.history.worker` na venv ou use a CLI. Um backfill por banco é executado por vez. |
+| Histórico incompleto | Consulte as lacunas; retome após corrigir a causa. Candles abertos ou anteriores à listagem não são inventados. |
+| `BYBIT_FORBIDDEN` | A tentativa para, sem repetir 403. Não alterar domínio para contornar restrições. Se for bloqueio por frequência, respeitar a espera prevista pela Bybit antes de retomar. |
 
-Banco e dependências são locais e ignorados. Datasets não são apagados automaticamente; acompanhe o espaço em disco. Esta entrega coleta janelas de 300 candles, sem paginação histórica longa. Acesso público não confirma elegibilidade ou permissões de uma conta privada. Não exponha os serviços em interfaces de rede públicas; não há autenticação multiusuário.
+Banco e dependências são locais e ignorados. Datasets não são apagados automaticamente; acompanhe o espaço em disco. O dashboard mantém janelas de 300 candles; o histórico usa seu próprio arquivo incremental paginado. Acesso público não confirma elegibilidade ou permissões de uma conta privada. Não exponha os serviços em interfaces de rede públicas; não há autenticação multiusuário.
 
-Arquitetura e fases: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Design e referências: [docs/DESIGN.md](docs/DESIGN.md). Pesquisa Freqtrade: [docs/FREQTRADE.md](docs/FREQTRADE.md). Evidências: [docs/VERIFICATION.md](docs/VERIFICATION.md).
+Arquitetura e fases: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Motor histórico: [docs/HISTORY.md](docs/HISTORY.md). Próxima etapa: [docs/PHASE_2_2.md](docs/PHASE_2_2.md). Design e referências: [docs/DESIGN.md](docs/DESIGN.md). Pesquisa Freqtrade: [docs/FREQTRADE.md](docs/FREQTRADE.md). Evidências: [docs/VERIFICATION.md](docs/VERIFICATION.md).

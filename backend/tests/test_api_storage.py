@@ -42,8 +42,13 @@ def test_api_health_no_data_and_validation(settings):
         assert client.post("/api/v1/market").status_code == 405
         assert client.post("/api/v1/orders", json={"side": "Buy"}).status_code == 404
         paths = client.get("/openapi.json").json()["paths"]
-        assert set(paths) == {"/health", "/api/v1/market"}
-        assert all(set(verbs) == {"get"} for verbs in paths.values())
+        assert set(paths) == {"/health", "/api/v1/market", "/api/v1/history/coverage",
+            "/api/v1/history/jobs", "/api/v1/history/jobs/{job_id}", "/api/v1/history/jobs/{job_id}/{action}",
+            "/api/v1/history/datasets", "/api/v1/history/datasets/{dataset_id}"}
+        mutations = {path for path, verbs in paths.items() if set(verbs) != {"get"}}
+        assert mutations == {"/api/v1/history/jobs", "/api/v1/history/jobs/{job_id}/{action}"}
+        assert set(paths["/api/v1/history/jobs"]) == {"get", "post"}
+        assert set(paths["/api/v1/history/jobs/{job_id}/{action}"]) == {"post"}
 
 
 def test_api_decimal_timestamp_and_staleness(settings, store, snapshot, monkeypatch):
