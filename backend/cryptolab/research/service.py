@@ -15,6 +15,7 @@ from cryptolab.engine.strategies import warmup
 from cryptolab.history.models import canonical_json
 from cryptolab.history.reader import DatasetReader
 from cryptolab.history.storage import HistoryStore
+from cryptolab.research.fingerprint import SCHEME, legacy_fingerprint, replay_fingerprint
 
 MAX_RESEARCH_CANDLES = 20_000
 
@@ -26,16 +27,12 @@ def digest(value) -> tuple[str, str]:
 
 def code_reference() -> dict:
     package = Path(__file__).resolve().parents[1]
-    files = sorted([*package.rglob("*.py"), *package.joinpath("migrations").glob("*.sql"),
-                    package.parent / "requirements.lock.txt"])
-    content = {str(p.relative_to(package.parent)).replace("\\", "/"): p.read_text(encoding="utf-8") for p in files}
-    code_hash = digest(content)[0]
     try:
         commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=package, capture_output=True,
                                 text=True, check=True, timeout=3).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         commit = "unavailable"
-    return {"code_commit": commit, "code_hash": code_hash, "engine_version": ENGINE_VERSION}
+    return {"code_commit": commit, "engine_version": ENGINE_VERSION, **replay_fingerprint()}
 
 
 class ProtocolRequest(Contract):
@@ -85,6 +82,9 @@ class ResearchService:
             raise ResearchError("INSTRUMENT_INVALID: limites públicos ausentes ou inválidos") from None
 
     def freeze(self, request: ProtocolRequest) -> dict:
+        reference = code_reference()
+        if reference["code_hash"] != STARTUP_CODE_HASH:
+            raise ResearchError("ENGINE_CHANGED_RESTART_REQUIRED: reinicie o processo de pesquisa")
         data = DatasetReader(self.store).read(request.dataset_hash)
         step = INTERVALS[data.manifest["interval"]]
         boundaries = (request.train_start, request.train_end, request.validation_end, request.test_end)
@@ -96,7 +96,7 @@ class ResearchService:
             raise ResearchError("INSUFFICIENT_WARMUP: reserve histórico anterior ao treino")
         protocol = {"request": request.model_dump(mode="json"),
                     "instrument": self.instrument(data.manifest["symbol"], data.manifest["interval"]).model_dump(mode="json"),
-                    **code_reference()}
+                    **reference}
         identifier, payload = digest(protocol)
         with self.store.connect() as db:
             db.execute("INSERT OR IGNORE INTO research_protocols(id,payload) VALUES (?,?)", (identifier, payload))
@@ -115,7 +115,17 @@ class ResearchService:
         protocol = self.protocol(request.protocol_id)
         spec = ProtocolRequest.model_validate(protocol["request"])
         current = code_reference()
-        if any(current[k] != protocol[k] for k in ("code_hash", "engine_version")):
+        if current["code_hash"] != STARTUP_CODE_HASH:
+            raise ResearchError("ENGINE_CHANGED_RESTART_REQUIRED: reinicie o processo de pesquisa")
+        scheme = protocol.get("fingerprint_scheme")
+        if scheme is None:
+            # Legacy protocols retain the original all-backend fingerprint semantics.
+            compatible = legacy_fingerprint() == protocol["code_hash"] or LEGACY_COMPATIBLE.get(protocol["code_hash"]) == current["code_hash"]
+        elif scheme == SCHEME:
+            compatible = protocol["code_hash"] == current["code_hash"] and protocol.get("replay_dependencies") == current["replay_dependencies"]
+        else:
+            raise ResearchError("UNKNOWN_FINGERPRINT_SCHEME: revisão do protocolo necessária")
+        if not compatible or current["engine_version"] != protocol["engine_version"]:
             raise ResearchError("ENGINE_CHANGED: use o código original ou crie um novo protocolo")
         if request.partition == "test":
             with self.store.connect() as db:
@@ -169,3 +179,13 @@ class ResearchService:
         result = self.result(identifier)
         replay = self.run(RunRequest(protocol_id=result["manifest"]["protocol_id"], partition=result["manifest"]["partition"]))
         return {"id": identifier, "replayed_id": replay["id"], "identical": identifier == replay["id"]}
+
+
+# Explicit, audited compatibility bridges only. Never infer compatibility from an old commit alone.
+LEGACY_COMPATIBLE = {
+    # Phase 2.2 legacy tree and exact scoped/runtime fingerprint audited against
+    # persisted real runs. This does not authorize any other legacy tree.
+    "85a5b51ab9a8a9a77e6e32f3ec887103b5dce701015077bf00b0335095d2168d":
+        "e3adfd0e20b3cdcad31a596ae3287aabeebcb65abc458f7541f23f063ecc3f62",
+}
+STARTUP_CODE_HASH = replay_fingerprint()["code_hash"]

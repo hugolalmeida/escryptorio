@@ -83,7 +83,7 @@ $teste.simulation.metrics
 .\.venv\Scripts\python.exe -m cryptolab.research.cli runs
 ```
 
-Teste final exige treino e validação já persistidos para o mesmo protocolo. Resultado é recalculado apenas com o mesmo hash de código; se o motor mudar, consulte o resultado antigo e use a revisão original para reverificá-lo. Até 20.000 candles incluindo warm-up por protocolo. Freqtrade fica isolado e não foi instalado. Detalhes, hipóteses e limitações em [docs/BACKTESTING.md](docs/BACKTESTING.md).
+Teste final exige treino e validação já persistidos para o mesmo protocolo. O replay verifica fingerprint versionado das dependências efetivas e do runtime; alterações independentes não invalidam novos protocolos. Protocolos legados mantêm o hash original, com uma ponte explícita apenas para a versão e ambiente auditados. Se o motor ou o runtime mudar, consulte o resultado antigo e use o ambiente original para reverificá-lo. Até 20.000 candles incluindo warm-up por protocolo. Freqtrade fica isolado e não foi instalado. Detalhes, hipóteses e limitações em [docs/BACKTESTING.md](docs/BACKTESTING.md).
 
 ## Histórico de pesquisa · Fase 2.1
 
