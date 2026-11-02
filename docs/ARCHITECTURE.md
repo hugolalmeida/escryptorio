@@ -1,6 +1,6 @@
 # Arquitetura · CryptoLab
 
-Decisão de 01/11/2026, atualizada na Fase 2.2. Aplicação local Windows, usuário único, somente Bybit Spot. A Fase 2.1 acrescentou arquivo histórico e datasets aprovados; a Fase 2.2 acrescenta estratégias experimentais e replay offline.
+Decisão de 01/11/2026, atualizada na Fase 2.3A. Aplicação local Windows, usuário único, somente Bybit Spot. A Fase 2.1 acrescentou arquivo histórico e datasets aprovados; a Fase 2.2 acrescentou estratégias experimentais e replay offline; a Fase 2.3A acrescenta a orquestração da Arena histórica.
 
 ```mermaid
 flowchart LR
@@ -27,6 +27,7 @@ backend/
   cryptolab/bybit.py       fronteira pública Spot com SDK sem chaves
   cryptolab/engine/        indicadores, contratos, estratégias e replay puros
   cryptolab/research/      protocolo, persistência imutável e CLI/API offline
+  cryptolab/arena/         competição histórica sobre ResearchService; CLI/API locais
   cryptolab/storage.py     transactions, snapshots e datasets
   cryptolab/migrations/    SQL incremental versionado
   tests/                   referência matemática, temporalidade, API e segurança
@@ -54,6 +55,8 @@ Na Fase 2.1, `historical_candles` armazena OHLCV incremental com chave por excha
 
 Na Fase 2.2, `/backtesting` usa proxy local de pesquisa, FastAPI, `DatasetReader` e motor puro, sem Pybit ou rede no replay. `research_protocols` e `research_runs` são tabelas imutáveis; hashes incluem parâmetros, janelas, versão/código, dados de instrumento e resultados. O protocolo é congelado antes do replay; a API limita concorrência e janela. As rotas de pesquisa exigem intenção local e não têm operações de corretora. Detalhes em [BACKTESTING.md](BACKTESTING.md).
 
+Na Fase 2.3A, a Arena histórica cria ou aceita quatro protocolos, executa treino/validação/teste pelo `ResearchService` e compara apenas resultados com premissas equivalentes. Experimento e ranking são imutáveis por SHA-256 e referenciam os resultados existentes. A API compartilha limite de concorrência com backtesting; não coleta dados ou acessa contas. CLI e detalhes em [ARENA.md](ARENA.md); a interface será construída na Fase 2.3B.
+
 ## Motor e fórmulas
 
 Valores financeiros são Decimal em contexto local de 34 dígitos; serialização JSON como strings. `float` é permitido somente na apresentação. SMA: média dos últimos N fechamentos. EMA: semente SMA dos primeiros N; alpha=2/(N+1). RSI de Wilder: média inicial de N ganhos/perdas, atualização `(anterior*(N−1)+atual)/N`; mercado constante retorna 50, somente ganhos 100, somente perdas 0. ATR: primeiro TR=high−low; demais TR incluem gaps para fechamento anterior; semente média de N e suavização de Wilder. Warm-up retorna ausente, não zero.
@@ -70,7 +73,8 @@ Tendência é descritiva: alta se fechamento>SMA20>EMA50; baixa se fechamento<SM
 | 2.1 | Histórico paginado, retomada, arquivo incremental e catálogo aprovado | Implementada; 5.475 candles únicos reais nas faixas documentadas |
 | 2.2 | Estratégias e backtesting sobre reader offline aprovado | Implementada; hipóteses experimentais e validação histórica limitada |
 | 4 | Sinais operacionais | Planejada; planos nesta entrega pertencem apenas ao replay histórico |
-| 5 | Arena com custos equivalentes e paper trading persistente | Planejada |
+| 2.3A | Backend da Arena histórica com custos equivalentes | Implementado; interface na Fase 2.3B |
+| 5 | Paper trading persistente | Planejada |
 | 6 | Permissões, elegibilidade, carteira e ordens somente leitura | Planejada; nenhuma credencial solicitada |
 | 7 | Verificação progressiva do motor, segurança e UI | Base implementada; expandir nas próximas fases |
 

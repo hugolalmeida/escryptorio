@@ -7,10 +7,10 @@ from cryptolab.history.storage import HistoryError, HistoryStore
 from cryptolab.research.service import ProtocolRequest, ResearchService, RunRequest
 
 
-def research_router(store: HistoryStore) -> APIRouter:
+def research_router(store: HistoryStore, gate: BoundedSemaphore | None = None) -> APIRouter:
     router = APIRouter(prefix="/api/v1/research", tags=["Backtests offline, somente simulação"])
     service = ResearchService(store)
-    gate = BoundedSemaphore(1)
+    gate = gate or BoundedSemaphore(1)
 
     def checked(fn, *args):
         if not gate.acquire(blocking=False):

@@ -46,10 +46,13 @@ def test_api_health_no_data_and_validation(settings):
             "/api/v1/history/jobs", "/api/v1/history/jobs/{job_id}", "/api/v1/history/jobs/{job_id}/{action}",
             "/api/v1/history/datasets", "/api/v1/history/datasets/{dataset_id}",
             "/api/v1/research/protocols", "/api/v1/research/protocols/{identifier}",
-            "/api/v1/research/runs", "/api/v1/research/runs/{identifier}", "/api/v1/research/runs/{identifier}/verify"}
+            "/api/v1/research/runs", "/api/v1/research/runs/{identifier}", "/api/v1/research/runs/{identifier}/verify",
+            "/api/v1/arena/experiments", "/api/v1/arena/experiments/{identifier}",
+            "/api/v1/arena/experiments/{identifier}/result", "/api/v1/arena/execute"}
         mutations = {path for path, verbs in paths.items() if set(verbs) != {"get"}}
         assert mutations == {"/api/v1/history/jobs", "/api/v1/history/jobs/{job_id}/{action}",
-            "/api/v1/research/protocols", "/api/v1/research/runs", "/api/v1/research/runs/{identifier}/verify"}
+            "/api/v1/research/protocols", "/api/v1/research/runs", "/api/v1/research/runs/{identifier}/verify",
+            "/api/v1/arena/experiments", "/api/v1/arena/execute"}
         assert set(paths["/api/v1/history/jobs"]) == {"get", "post"}
         assert set(paths["/api/v1/history/jobs/{job_id}/{action}"]) == {"post"}
 

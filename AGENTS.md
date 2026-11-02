@@ -30,3 +30,4 @@ Consultar README. `npm run build`, `npm run typecheck`, `npm run test:ui` e `.ve
 Mudanças no motor exigem testes de referência, invariância de prefixo (causalidade), warm-up e extremos.
 Erros upstream preservam o último snapshot e tornam seu estado obsoleto por idade; nunca atualizam artificialmente o timestamp.
 Não instalar hooks, publicar, conectar conta privada ou ativar módulos futuros por inferência.
+Ao concluir cada tarefa, criar um commit local com as alterações pertinentes e verificadas, preservando alterações preexistentes. Fazer push somente quando solicitado.

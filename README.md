@@ -57,7 +57,20 @@ Para produção local: `npm run build`, depois `npm start`, mantendo API e worke
 - Datasets históricos aprovados com 100% de cobertura, SHA-256, manifesto e proteção SQL contra alteração; leitor offline para o futuro motor quantitativo. Snapshots do dashboard permanecem separados.
 - Backtesting offline de Trend, RSI, Breakout e Buy & Hold, com indicadores causais, custos, stop/alvo, limites de instrumento e janelas cronológicas. Protocolos e resultados imutáveis por SHA-256; nenhuma rede durante o replay.
 
-Arena, sinais operacionais, paper trading e carteira privada têm páginas de escopo e **ainda não executam suas funções**. Mack permanece não validada. Não há rota de ordem, cliente autenticado ou toggle para ativar trading. Um backtest é pesquisa histórica, não validação de rentabilidade.
+A Arena histórica possui CLI e API offline; sua página ainda apresenta o escopo planejado. Sinais operacionais, paper trading e carteira privada **ainda não executam suas funções**. Mack permanece não validada. Não há rota de ordem, cliente autenticado ou toggle para ativar trading. Um backtest é pesquisa histórica, não validação de rentabilidade.
+
+## Arena histórica offline · Fase 2.3A
+
+Crie e execute quatro estratégias em janelas de treino, validação e teste, com o mesmo dataset, capital e custos. A interface da Arena fica para a Fase 2.3B. Com o dataset e snapshot locais disponíveis, execute:
+
+```powershell
+$arena = .\.venv\Scripts\python.exe -m cryptolab.arena.cli create --config docs/arena-example.json | ConvertFrom-Json
+$resultado = .\.venv\Scripts\python.exe -m cryptolab.arena.cli execute --experiment $arena.id | ConvertFrom-Json
+$resultado.rankings.test.entries | Format-Table strategy,rank,net_return_pct,closed_trades,insufficient_sample
+.\.venv\Scripts\python.exe -m cryptolab.arena.cli result --experiment $arena.id
+```
+
+O exemplo depende do dataset BTCUSDT documentado; ajuste o JSON para outros datasets e premissas. Resultados, API, integridade, limitações e próximos passos em [docs/ARENA.md](docs/ARENA.md). Amostras pequenas não validam uma estratégia.
 
 ## Backtesting offline · Fase 2.2
 
