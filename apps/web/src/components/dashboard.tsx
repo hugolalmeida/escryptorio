@@ -16,10 +16,10 @@ function Change({ value }: { value?: string }) {
 }
 
 const strategyRows = [
-  ["Trend", "Tendência por médias móveis", "Em planejamento"],
-  ["RSI", "Reversão à média", "Em planejamento"],
-  ["Breakout", "Rompimento de faixa", "Em planejamento"],
-  ["Buy & Hold", "Referência de mercado", "Em planejamento"],
+  ["Trend", "Tendência por médias móveis", "Em pesquisa"],
+  ["RSI", "Reversão à média", "Em pesquisa"],
+  ["Breakout", "Rompimento de faixa", "Em pesquisa"],
+  ["Buy & Hold", "Referência de mercado", "Em pesquisa"],
   ["Mack", "Metodologia a especificar", "Não validada"],
 ];
 
@@ -72,7 +72,7 @@ export function Dashboard() {
     <section className="panel"><div className="panel-heading"><h2>Mercado em 24h</h2><span className="muted tiny">{symbol.slice(0, 3)}</span></div><dl className="market-stats"><div><dt>Máxima</dt><dd>{price(data?.ticker.high_24h)}<small>USDT</small></dd></div><div><dt>Mínima</dt><dd>{price(data?.ticker.low_24h)}<small>USDT</small></dd></div><div><dt>Volume base</dt><dd>{compact(data?.ticker.volume_24h)}<small>{symbol.slice(0, 3)}</small></dd></div><div><dt>Volume financeiro</dt><dd>{compact(data?.ticker.turnover_24h)}<small>USDT</small></dd></div></dl></section>
     </aside></div>
 
-    <div className="research-layout"><section className="panel strategy-panel"><div className="panel-heading"><div><h2>Laboratório de estratégias</h2><p>Uma base comum. Hipóteses diferentes.</p></div><Link href="/arena" className="text-link">Explorar Arena <ArrowRight size={14} /></Link></div><div className="table-scroll"><table><thead><tr><th>Estratégia</th><th>Abordagem</th><th>Validação</th><th className="numeric">Retorno líquido</th></tr></thead><tbody>{strategyRows.map(([name, description, state]) => <tr key={name}><td><span className="strategy-name"><i className={name === "Mack" ? "strategy-dot-unvalidated" : ""} />{name}</span></td><td className="muted">{description}</td><td><span className={`strategy-state ${name === "Mack" ? "unvalidated" : ""}`}>{state}</span></td><td className="numeric muted">—</td></tr>)}</tbody></table></div><div className="table-footnote">Resultados serão exibidos após backtests com taxas, slippage e teste fora da amostra.</div></section>
+    <div className="research-layout"><section className="panel strategy-panel"><div className="panel-heading"><div><h2>Laboratório de estratégias</h2><p>Uma base comum. Hipóteses diferentes.</p></div><Link href="/arena" className="text-link">Explorar Arena <ArrowRight size={14} /></Link></div><div className="table-scroll"><table><thead><tr><th>Estratégia</th><th>Abordagem</th><th>Validação</th><th className="numeric">Retorno líquido</th></tr></thead><tbody>{strategyRows.map(([name, description, state]) => <tr key={name}><td><span className="strategy-name"><i className={name === "Mack" ? "strategy-dot-unvalidated" : ""} />{name}</span></td><td className="muted">{description}</td><td><span className={`strategy-state ${name === "Mack" ? "unvalidated" : ""}`}>{state}</span></td><td className="numeric muted">—</td></tr>)}</tbody></table></div><div className="table-footnote">Resultados de pesquisa disponíveis em <Link href="/backtesting" className="text-link">Backtesting</Link>. Comparação na Arena ainda planejada.</div></section>
       <section className="panel provenance"><div className="panel-heading"><h2>Integridade dos dados</h2><Database size={15} className="muted" /></div><dl><div><dt>Última resposta Bybit</dt><dd>{data ? datetime(data.source_time_ms) : "Aguardando coleta"}</dd></div><div><dt>Idade do snapshot</dt><dd>{data ? `${age}s / limite ${data.stale_after_seconds}s` : "—"}</dd></div><div><dt>Dataset de candles fechados</dt><dd className="dataset-id" title={data?.dataset_id}>{data ? `sha256:${data.dataset_id.slice(0, 18)}…` : "—"}</dd></div></dl><div className="integrity-note"><ShieldCheck size={16} /><span>Coleta pública<small>Sem credenciais ou envio de ordens.</small></span><LockKeyhole size={13} /></div></section></div>
   </main>;
 }

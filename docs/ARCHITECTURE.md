@@ -1,6 +1,6 @@
 # Arquitetura · CryptoLab
 
-Decisão de 01/11/2026, atualizada na Fase 2.1. Aplicação local Windows, usuário único, somente Bybit Spot. A base cobre scaffold, design system, dashboard, coleta pública e indicadores básicos; a Fase 2.1 acrescenta arquivo histórico incremental e datasets aprovados. As fases posteriores estão especificadas abaixo.
+Decisão de 01/11/2026, atualizada na Fase 2.2. Aplicação local Windows, usuário único, somente Bybit Spot. A Fase 2.1 acrescentou arquivo histórico e datasets aprovados; a Fase 2.2 acrescenta estratégias experimentais e replay offline.
 
 ```mermaid
 flowchart LR
@@ -25,7 +25,8 @@ backend/
   cryptolab/api.py         consultas locais, validação e estado de segurança
   cryptolab/worker.py      coletor independente, periódico ou --once
   cryptolab/bybit.py       fronteira pública Spot com SDK sem chaves
-  cryptolab/engine/        indicadores puros; expansão futura das estratégias
+  cryptolab/engine/        indicadores, contratos, estratégias e replay puros
+  cryptolab/research/      protocolo, persistência imutável e CLI/API offline
   cryptolab/storage.py     transactions, snapshots e datasets
   cryptolab/migrations/    SQL incremental versionado
   tests/                   referência matemática, temporalidade, API e segurança
@@ -51,6 +52,8 @@ SQLite usa WAL e `busy_timeout` via conexão, migrations sob `BEGIN IMMEDIATE`, 
 
 Na Fase 2.1, `historical_candles` armazena OHLCV incremental com chave por exchange, mercado, ativo, timeframe e abertura; `historical_datasets` guarda payload e manifesto aprovados, protegidos por triggers. Jobs, runs, páginas e lacunas são rastreáveis em tabelas próprias. Um worker histórico independente usa lease persistido, coleta somente faixas ausentes e aprova apenas cobertura completa. `DatasetReader` verifica hash, manifesto e recorte sem rede. A API continua sem fazer coleta; POSTs de histórico apenas controlam a fila local com validação de origem/intenção. Detalhes, comandos e cobertura real em [HISTORY.md](HISTORY.md).
 
+Na Fase 2.2, `/backtesting` usa proxy local de pesquisa, FastAPI, `DatasetReader` e motor puro, sem Pybit ou rede no replay. `research_protocols` e `research_runs` são tabelas imutáveis; hashes incluem parâmetros, janelas, versão/código, dados de instrumento e resultados. O protocolo é congelado antes do replay; a API limita concorrência e janela. As rotas de pesquisa exigem intenção local e não têm operações de corretora. Detalhes em [BACKTESTING.md](BACKTESTING.md).
+
 ## Motor e fórmulas
 
 Valores financeiros são Decimal em contexto local de 34 dígitos; serialização JSON como strings. `float` é permitido somente na apresentação. SMA: média dos últimos N fechamentos. EMA: semente SMA dos primeiros N; alpha=2/(N+1). RSI de Wilder: média inicial de N ganhos/perdas, atualização `(anterior*(N−1)+atual)/N`; mercado constante retorna 50, somente ganhos 100, somente perdas 0. ATR: primeiro TR=high−low; demais TR incluem gaps para fechamento anterior; semente média de N e suavização de Wilder. Warm-up retorna ausente, não zero.
@@ -65,15 +68,15 @@ Tendência é descritiva: alta se fechamento>SMA20>EMA50; baixa se fechamento<SM
 | 2 | Design system, dashboard, estados e responsividade | Implementada |
 | 3 | Bybit pública, persistência, candles e timestamp real | Implementada |
 | 2.1 | Histórico paginado, retomada, arquivo incremental e catálogo aprovado | Implementada; 5.475 candles únicos reais nas faixas documentadas |
-| 2.2 | Estratégias e backtesting sobre reader offline aprovado | Plano em [PHASE_2_2.md](PHASE_2_2.md); sem estratégias nesta entrega |
-| 4 | Estratégias, sinais e backtest com dados versionados | Planejada; indicadores básicos entregues |
+| 2.2 | Estratégias e backtesting sobre reader offline aprovado | Implementada; hipóteses experimentais e validação histórica limitada |
+| 4 | Sinais operacionais | Planejada; planos nesta entrega pertencem apenas ao replay histórico |
 | 5 | Arena com custos equivalentes e paper trading persistente | Planejada |
 | 6 | Permissões, elegibilidade, carteira e ordens somente leitura | Planejada; nenhuma credencial solicitada |
 | 7 | Verificação progressiva do motor, segurança e UI | Base implementada; expandir nas próximas fases |
 
-### Fase 4: protocolo de pesquisa
+### Protocolo de pesquisa · Fase 2.2
 
-Definir objetos `Strategy`, `SignalPlan`, `BacktestConfig`, `Fill`, `RunManifest` e `Metrics`. Estratégias long-only: Trend (cruzamento de médias), RSI (limiares de reversão), Breakout (máximo dos N candles anteriores, excluindo o candle de decisão) e Buy & Hold (baseline com mesmos custos). Parâmetros e regras de saída devem ser fixados e documentados antes da implementação. Mack não participa de ranking ou sinais enquanto não especificada e validada.
+Contratos `Strategy`, `SignalPlan`, `BacktestConfig`, `Fill`, `RunManifest` e `Metrics` são implementados no motor puro. Estratégias long-only: Trend (cruzamento de médias), RSI (recuperação após limiar), Breakout (máximo dos N candles anteriores) e Buy & Hold (baseline com mesmos custos). Regras e parâmetros experimentais foram registrados antes dos ensaios. Mack não participa de ranking ou sinais enquanto não especificada e validada.
 
 Manifesto: hash e intervalo do dataset, versão da estratégia, commit do código, dependências fixadas, parâmetros, precisão, política de fills e custos, capital inicial, datas de treino/validação/teste. Não usar relógio atual dentro de um replay. Seed fixa se algum modelo futuro exigir aleatoriedade.
 

@@ -1,6 +1,6 @@
 # Escryptorio · CryptoLab
 
-Workspace privado de pesquisa de criptomoedas. Dashboard local, dados públicos reais da Bybit Spot, indicadores determinísticos, snapshots versionados e histórico de pesquisa com coleta retomável. BTCUSDT e ETHUSDT; sem credenciais, margem, empréstimo, alavancagem ou ordens reais.
+Workspace privado de pesquisa de criptomoedas. Dashboard local, dados públicos reais da Bybit Spot, indicadores determinísticos, histórico versionado e backtests offline reproduzíveis. BTCUSDT e ETHUSDT; sem credenciais, margem, empréstimo, alavancagem ou ordens reais.
 
 ## Iniciar no Windows
 
@@ -55,8 +55,35 @@ Para produção local: `npm run build`, depois `npm start`, mantendo API e worke
 - Página **Dados históricos**: ativo/timeframe, período UTC, solicitação de coleta, progresso, pausa/retomada, cobertura, lacunas, catálogo e verificação de datasets.
 - Backfill paginado até 1.000 candles por chamada, arquivo incremental sem duplicação, retries limitados, lease persistido e retomada somente das faixas ausentes.
 - Datasets históricos aprovados com 100% de cobertura, SHA-256, manifesto e proteção SQL contra alteração; leitor offline para o futuro motor quantitativo. Snapshots do dashboard permanecem separados.
+- Backtesting offline de Trend, RSI, Breakout e Buy & Hold, com indicadores causais, custos, stop/alvo, limites de instrumento e janelas cronológicas. Protocolos e resultados imutáveis por SHA-256; nenhuma rede durante o replay.
 
-Arena, backtesting, sinais operacionais, paper trading e carteira privada têm páginas de escopo e **ainda não executam suas funções**. Mack permanece não validada. Não há rota de ordem, cliente autenticado ou toggle para ativar trading. Os testes atuais comprovam causalidade dos indicadores; ainda não existe backtest a validar.
+Arena, sinais operacionais, paper trading e carteira privada têm páginas de escopo e **ainda não executam suas funções**. Mack permanece não validada. Não há rota de ordem, cliente autenticado ou toggle para ativar trading. Um backtest é pesquisa histórica, não validação de rentabilidade.
+
+## Backtesting offline · Fase 2.2
+
+Acesse **http://127.0.0.1:3100/backtesting**. Selecione um dataset aprovado e período, revise estratégia e custos, congele o protocolo, execute treino e validação e depois o teste fora da amostra. Cada janela começa com saldo virtual novo; dados anteriores servem apenas para aquecimento. O painel permite consultar resultados anteriores, retomar o protocolo após recarregar a página e verificar o hash. O snapshot público do instrumento precisa estar disponível no banco; seus limites são premissas atuais, não regras históricas verificadas. Nenhuma conta é conectada. Reinicie a API e o frontend se estiverem abertos em versão anterior.
+
+Padrões experimentais: capital 10.000 USDT, taxa 0,1% por fill, slippage adverso 0,05%, risco planejado 1%, exposição 100%, stop 3% e alvo 6%. Trend SMA20/50, RSI Wilder14 recuperação de 30 e saída 60, Breakout de 20 candles anteriores. Buy & Hold não usa stop. A interface aceita outras premissas; taxas não são verificadas na conta. Amostra com menos de 30 trades é marcada insuficiente; isso não significa que amostras maiores sejam validadas. Não há ranking automático.
+
+### CLI PowerShell
+
+O exemplo [docs/backtest-example.json](docs/backtest-example.json) usa o dataset BTCUSDT 1h da seção anterior; uma instalação nova precisa coletá-lo e ter snapshot público do instrumento. Alterar o JSON antes de congelar, inclusive ativo, estratégia (`trend`, `rsi`, `breakout`, `buy_hold`), períodos UTC em segundos e custos. Como estratégia, parâmetros, código e regras do instrumento fazem parte do protocolo, o ID pode variar. Nenhuma chamada à Bybit é feita pela CLI de pesquisa.
+
+```powershell
+.\.venv\Scripts\python.exe -m cryptolab.research.cli datasets
+$protocolo = .\.venv\Scripts\python.exe -m cryptolab.research.cli freeze --config docs/backtest-example.json | ConvertFrom-Json
+$protocolo.id
+$treino = .\.venv\Scripts\python.exe -m cryptolab.research.cli run --protocol $protocolo.id --partition train | ConvertFrom-Json
+$validacao = .\.venv\Scripts\python.exe -m cryptolab.research.cli run --protocol $protocolo.id --partition validation | ConvertFrom-Json
+$teste = .\.venv\Scripts\python.exe -m cryptolab.research.cli run --protocol $protocolo.id --partition test | ConvertFrom-Json
+$teste.simulation.metrics
+.\.venv\Scripts\python.exe -m cryptolab.research.cli trades --run $teste.id
+.\.venv\Scripts\python.exe -m cryptolab.research.cli show --run $teste.id
+.\.venv\Scripts\python.exe -m cryptolab.research.cli verify --run $teste.id
+.\.venv\Scripts\python.exe -m cryptolab.research.cli runs
+```
+
+Teste final exige treino e validação já persistidos para o mesmo protocolo. Resultado é recalculado apenas com o mesmo hash de código; se o motor mudar, consulte o resultado antigo e use a revisão original para reverificá-lo. Até 20.000 candles incluindo warm-up por protocolo. Freqtrade fica isolado e não foi instalado. Detalhes, hipóteses e limitações em [docs/BACKTESTING.md](docs/BACKTESTING.md).
 
 ## Histórico de pesquisa · Fase 2.1
 
@@ -102,6 +129,7 @@ Playwright inicia um servidor de produção exclusivo na porta 3100 (deixe-a liv
 ```powershell
 $env:CRYPTOLAB_LIVE_SMOKE = '1'
 $env:CRYPTOLAB_HISTORY_SMOKE = '1' # opcional: requer o backfill BTC acima e worker histórico ativo
+$env:CRYPTOLAB_BACKTEST_SMOKE = '1' # opcional: requer dataset BTC aprovado e snapshot do instrumento
 npm run test:ui
 ```
 
@@ -124,4 +152,4 @@ Para preservar instâncias já abertas durante QA, é possível usar um backend 
 
 Banco e dependências são locais e ignorados. Datasets não são apagados automaticamente; acompanhe o espaço em disco. O dashboard mantém janelas de 300 candles; o histórico usa seu próprio arquivo incremental paginado. Acesso público não confirma elegibilidade ou permissões de uma conta privada. Não exponha os serviços em interfaces de rede públicas; não há autenticação multiusuário.
 
-Arquitetura e fases: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Motor histórico: [docs/HISTORY.md](docs/HISTORY.md). Próxima etapa: [docs/PHASE_2_2.md](docs/PHASE_2_2.md). Design e referências: [docs/DESIGN.md](docs/DESIGN.md). Pesquisa Freqtrade: [docs/FREQTRADE.md](docs/FREQTRADE.md). Evidências: [docs/VERIFICATION.md](docs/VERIFICATION.md).
+Arquitetura e fases: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Motor histórico: [docs/HISTORY.md](docs/HISTORY.md). Backtesting: [docs/BACKTESTING.md](docs/BACKTESTING.md). Plano anterior: [docs/PHASE_2_2.md](docs/PHASE_2_2.md). Design: [docs/DESIGN.md](docs/DESIGN.md). Pesquisa Freqtrade: [docs/FREQTRADE.md](docs/FREQTRADE.md). Evidências: [docs/VERIFICATION.md](docs/VERIFICATION.md).

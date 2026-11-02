@@ -44,9 +44,12 @@ def test_api_health_no_data_and_validation(settings):
         paths = client.get("/openapi.json").json()["paths"]
         assert set(paths) == {"/health", "/api/v1/market", "/api/v1/history/coverage",
             "/api/v1/history/jobs", "/api/v1/history/jobs/{job_id}", "/api/v1/history/jobs/{job_id}/{action}",
-            "/api/v1/history/datasets", "/api/v1/history/datasets/{dataset_id}"}
+            "/api/v1/history/datasets", "/api/v1/history/datasets/{dataset_id}",
+            "/api/v1/research/protocols", "/api/v1/research/protocols/{identifier}",
+            "/api/v1/research/runs", "/api/v1/research/runs/{identifier}", "/api/v1/research/runs/{identifier}/verify"}
         mutations = {path for path, verbs in paths.items() if set(verbs) != {"get"}}
-        assert mutations == {"/api/v1/history/jobs", "/api/v1/history/jobs/{job_id}/{action}"}
+        assert mutations == {"/api/v1/history/jobs", "/api/v1/history/jobs/{job_id}/{action}",
+            "/api/v1/research/protocols", "/api/v1/research/runs", "/api/v1/research/runs/{identifier}/verify"}
         assert set(paths["/api/v1/history/jobs"]) == {"get", "post"}
         assert set(paths["/api/v1/history/jobs/{job_id}/{action}"]) == {"post"}
 

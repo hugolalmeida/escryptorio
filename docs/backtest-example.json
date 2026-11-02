@@ -1,0 +1,33 @@
+{
+  "dataset_hash": "f3b2e55b1cc373d448efa3676c63064cb482c86be4ebd7442bce573134f972c6",
+  "strategy": "trend",
+  "parameters": {
+    "fast": 20,
+    "slow": 50,
+    "trend_entry": "cross",
+    "trend_exit": "averages",
+    "max_atr_ratio": null,
+    "rsi_period": 14,
+    "rsi_entry": "30",
+    "rsi_exit": "60",
+    "trend_filter": false,
+    "lookback": 20,
+    "volume_multiple": null,
+    "stop_fraction": "0.03",
+    "target_fraction": "0.06"
+  },
+  "config": {
+    "capital": "10000",
+    "risk_fraction": "0.01",
+    "exposure_fraction": "1",
+    "costs": {
+      "fee_rate": "0.001",
+      "slippage_rate": "0.0005"
+    },
+    "final_policy": "liquidate"
+  },
+  "train_start": 1788480000,
+  "train_end": 1790812800,
+  "validation_end": 1792108800,
+  "test_end": 1793491200
+}

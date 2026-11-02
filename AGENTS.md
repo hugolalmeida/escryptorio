@@ -21,6 +21,7 @@ Aplicação privada, local, usuário único, exclusivamente Bybit Spot BTCUSDT e
 - Mutações HTTP de histórico apenas enfileiram/pausam/retomam pesquisa local e exigem cabeçalho `X-CryptoLab-Research: 1`. Nunca são endpoints de execução de trades.
 - Histórico usa intervalos UTC `[início, fim)`, sem preenchimento de lacunas; aprovar somente cobertura de 100%. Nunca sobrescrever candles conflitantes ou datasets aprovados.
 - `backend/cryptolab/engine`: funções puras, independentes de API/SDK/persistência.
+- `backend/cryptolab/research`: protocolo congelado, execução offline por `DatasetReader`, persistência imutável e API/CLI locais de simulação. Mutações exigem `X-CryptoLab-Research: 1`; não são endpoints de trades reais.
 - `backend/cryptolab/migrations`: migrations SQL incrementais e transacionais.
 - `docs`: arquitetura, decisões, desenho, roteiro e verificações.
 

@@ -10,6 +10,7 @@ from cryptolab.models import Interval, Symbol
 from cryptolab.storage import Store
 from cryptolab.history.api import history_router
 from cryptolab.history.storage import HistoryStore
+from cryptolab.research.api import research_router
 
 
 def create_app(settings: Settings | None = None):
@@ -23,6 +24,7 @@ def create_app(settings: Settings | None = None):
 
     app = FastAPI(title="CryptoLab · API local de pesquisa", version="0.1.0", lifespan=lifespan)
     app.include_router(history_router(HistoryStore(settings.database_path)))
+    app.include_router(research_router(HistoryStore(settings.database_path)))
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
 
     @app.middleware("http")

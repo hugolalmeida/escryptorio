@@ -1,4 +1,6 @@
-# Plano · Fase 2.2 — Estratégias e Backtesting
+# Plano original · Fase 2.2 — Estratégias e Backtesting
+
+Implementação e diferenças detalhadas em [BACKTESTING.md](BACKTESTING.md); este arquivo preserva o planejamento anterior à implementação.
 
 Pré-requisito entregue: arquivo incremental, catálogo aprovado, hash reproduzível, reader offline Decimal e verificação de integridade. Esta fase é um plano; nenhuma estratégia foi implementada na fase 2.1.
 
