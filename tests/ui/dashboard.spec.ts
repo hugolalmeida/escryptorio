@@ -91,7 +91,7 @@ test("navegação e bloqueio de execução", async ({ page }, testInfo) => {
   await expect(page.getByRole("button", { name: /comprar|vender|executar|ativar/i })).toHaveCount(0);
   await page.getByRole("link", { name: "Voltar ao dashboard" }).click();
   await page.getByRole("link", { name: "Explorar Arena" }).click();
-  await expect(page.getByRole("heading", { name: "Arena", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Arena de Bots", exact: true })).toBeVisible();
   await expect(page.getByText(/Mack reservada como não validada/)).toBeVisible();
 });
 

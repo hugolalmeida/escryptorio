@@ -1,6 +1,6 @@
 # Arena histórica · Fase 2.3A
 
-A Arena é uma camada local de orquestração de pesquisa; usa exclusivamente `ResearchService`, `DatasetReader` e o motor existente. Não possui cliente da Bybit, credenciais ou funções de ordem. Não há frontend da Arena nesta fase. Cada competição contém Trend, RSI, Breakout e Buy & Hold, com quatro carteiras virtuais independentes e capital inicial igual.
+A Arena é uma camada local de orquestração de pesquisa; usa exclusivamente `ResearchService`, `DatasetReader` e o motor existente. Não possui cliente da Bybit, credenciais ou funções de ordem. Cada competição contém Trend, RSI, Breakout e Buy & Hold, com quatro carteiras virtuais independentes e capital inicial igual. A interface `/arena` foi adicionada na Fase 2.3B.
 
 ## Contrato e fluxo
 
@@ -51,6 +51,14 @@ Dataset BTCUSDT 1h `f3b2e55b1cc373d448efa3676c63064cb482c86be4ebd7442bce573134f9
 
 Experimento `1d8e0f0a7229bd181a4a6900d438ef3998782cc493d378b0307e97712fe6ba65`; resultado `a9dbb88ba11b21a6bf49630e99a33b94850ae194b468dcea810e06918462e92f`. A repetição teve o mesmo hash. Uma segunda competição com os quatro protocolos legados reais preservou seus IDs e concluiu: experimento `79e9e6839712bda6ab91975f681d94096b13b7cb42b2629188fefad45f025976`, resultado `f6bd0a132d5ed81e8a52f76c90f072128b4c0dc2958789a1fec071d09b750d2e`. Essas referências existem no banco local usado no ensaio, não são distribuídas pelo Git. A janela é curta e nenhum resultado valida uma estratégia ou prevê rentabilidade.
 
-## Preparação para 2.3B
+## Interface · Fase 2.3B
 
-A interface futura pode listar experimentos, criar com formulário, executar e consultar resultados pelas rotas acima. Deve distinguir execução em andamento/erro, exibir janelas e parâmetros congelados, métricas indefinidas, hashes e ranking fora da amostra com o aviso de amostra insuficiente. O processamento é síncrono nesta fase: para UX robusta com experimentos maiores, considerar fila/worker de pesquisa e progresso persistido em etapa própria, sem modificar a semântica financeira. Paper contínuo, conta privada, execução real e validação estatística continuam fora do escopo.
+A página permite configurar janelas, capital, custos, risco e parâmetros individuais, criar e executar o experimento, consultar histórico e inspecionar os parâmetros congelados. A tabela preserva a ordem e os empates fornecidos pelo backend; null aparece como indefinido com motivo. Teste fora da amostra é a janela inicial, sem indicar vencedor validado. Dados e métricas nunca são gerados no navegador.
+
+As quatro curvas são carregadas sequencialmente pelos IDs persistidos via `/api/research/runs/{id}`, usando o proxy local existente. A página confere IDs, janela e timestamps comuns antes de desenhar. O gráfico Lightweight Charts usa float apenas para renderização, exibe tooltip UTC e permite ocultar curvas; valores exatos do bot selecionado estão em tabela paginada. Nenhum ponto é interpolado ou alterado na fonte. As tabelas largas têm rolagem interna no celular.
+
+`/api/arena/[...path]` aceita apenas os cinco recursos documentados, Host local e POST com cabeçalho de pesquisa/origem correspondente. O backend segue acessível apenas pelo servidor Next; 409 e 429 são exibidos, e o processamento síncrono não mostra percentual inventado. Um timeout ou falha de transporte ao executar dispara uma consulta de resultado; caso a API esteja ocupada ou indisponível, a reexecução fica bloqueada até uma consulta manual confirmar resultado persistido ou ausência. Não há POST automático. Essa verificação usa o limitador por processo já existente; CLI e outras instâncias externas não compartilham o limitador, portanto devem ser evitadas durante a recuperação. Para uma UX mais robusta em competições longas, uma fila/worker com estado durável é pendência futura.
+
+## Preparação para 2.3C
+
+A próxima fase deve partir dos contratos e resultados persistidos existentes, definindo seu próprio escopo antes de implementar. Paper contínuo, conta privada, execução real, fila distribuída e validação estatística permanecem fora desta entrega. A interface não altera motor, fingerprint, dados ou proteção de execução real.

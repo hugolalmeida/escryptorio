@@ -57,11 +57,13 @@ Para produção local: `npm run build`, depois `npm start`, mantendo API e worke
 - Datasets históricos aprovados com 100% de cobertura, SHA-256, manifesto e proteção SQL contra alteração; leitor offline para o futuro motor quantitativo. Snapshots do dashboard permanecem separados.
 - Backtesting offline de Trend, RSI, Breakout e Buy & Hold, com indicadores causais, custos, stop/alvo, limites de instrumento e janelas cronológicas. Protocolos e resultados imutáveis por SHA-256; nenhuma rede durante o replay.
 
-A Arena histórica possui CLI e API offline; sua página ainda apresenta o escopo planejado. Sinais operacionais, paper trading e carteira privada **ainda não executam suas funções**. Mack permanece não validada. Não há rota de ordem, cliente autenticado ou toggle para ativar trading. Um backtest é pesquisa histórica, não validação de rentabilidade.
+A Arena histórica possui interface, CLI e API offline. Sinais operacionais, paper trading e carteira privada **ainda não executam suas funções**. Mack permanece não validada. Não há rota de ordem, cliente autenticado ou toggle para ativar trading. Um backtest é pesquisa histórica, não validação de rentabilidade.
 
-## Arena histórica offline · Fase 2.3A
+## Arena histórica offline · Fases 2.3A e 2.3B
 
-Crie e execute quatro estratégias em janelas de treino, validação e teste, com o mesmo dataset, capital e custos. A interface da Arena fica para a Fase 2.3B. Com o dataset e snapshot locais disponíveis, execute:
+Em **http://127.0.0.1:3100/arena**, selecione um dataset aprovado, revise as janelas e as premissas comuns e ajuste os parâmetros individuais. Crie o experimento para congelar os protocolos; depois execute e consulte os rankings de treino, validação e teste fora da amostra. Os gráficos usam execuções persistidas, e o histórico permite reabri-las. Cada estratégia recebe capital virtual independente. Se uma execução exceder o tempo, consulte o resultado antes de tentar novamente; não há reexecução automática. Reinicie API e frontend após atualizar o projeto.
+
+Também é possível usar a CLI. Com o dataset e snapshot locais disponíveis, execute:
 
 ```powershell
 $arena = .\.venv\Scripts\python.exe -m cryptolab.arena.cli create --config docs/arena-example.json | ConvertFrom-Json
@@ -143,6 +145,7 @@ Playwright inicia um servidor de produção exclusivo na porta 3100 (deixe-a liv
 $env:CRYPTOLAB_LIVE_SMOKE = '1'
 $env:CRYPTOLAB_HISTORY_SMOKE = '1' # opcional: requer o backfill BTC acima e worker histórico ativo
 $env:CRYPTOLAB_BACKTEST_SMOKE = '1' # opcional: requer dataset BTC aprovado e snapshot do instrumento
+$env:CRYPTOLAB_ARENA_SMOKE = '1' # opcional: requer dataset BTC aprovado e API com Arena
 npm run test:ui
 ```
 

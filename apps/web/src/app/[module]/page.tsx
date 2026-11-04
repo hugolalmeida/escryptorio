@@ -4,8 +4,6 @@ import { ArrowLeft, ArrowRight, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const modules: Record<string, { title: string; description: string; phase: string; items: string[] }> = {
-  arena: { title: "Arena", description: "Compare hipóteses sob as mesmas condições de mercado.", phase: "Fase 5 · Planejada",
-    items: ["Trend, RSI, Breakout e Buy & Hold com capital inicial e custos equivalentes.", "Retorno líquido, drawdown, profit factor, acerto, expectativa e número de trades.", "Comparação fora da amostra, com períodos de treino, validação e teste explícitos.", "Mack reservada como não validada; sem resultados ou sinais até sua especificação."] },
   signals: { title: "Sinais", description: "Planos explicáveis, com contexto e prazo de validade.", phase: "Fase 4 · Planejada",
     items: ["Ativo, timeframe, estratégia, entrada, stop, alvo e relação risco-retorno.", "Justificativa por condições verificáveis, invalidação e vencimento explícito.", "Recusa de dados antigos, lacunas no histórico e warm-up insuficiente.", "Nenhum sinal é gerado nesta etapa; indicadores do dashboard são descritivos."] },
   paper: { title: "Paper Trading", description: "Um livro de operações virtual, separado da conta da corretora.", phase: "Fase 5 · Planejada",
@@ -15,7 +13,7 @@ const modules: Record<string, { title: string; description: string; phase: strin
   execution: { title: "Execução real desativada", description: "Nenhuma rota de envio de ordens ou cliente autenticado foi implementado.", phase: "Bloqueada por arquitetura",
     items: ["LIVE_TRADING_ENABLED=false. Outro valor impede a inicialização do backend e worker.", "Somente Spot. Margem, alavancagem e empréstimo proibidos.", "Execução futura exige aprovação humana, elegibilidade, permissões e limites confirmados.", "Antes de implementar: idempotência, stops, fills parciais, reconciliação, auditoria e kill switch."] },
   roadmap: { title: "Roteiro do projeto", description: "Da observação do mercado à pesquisa reproduzível.", phase: "Entrega inicial · Fases 1–3",
-    items: ["Fase 1: arquitetura, regras de segurança e estrutura de processos — implementadas.", "Fase 2: design system e dashboard responsivo — implementados.", "Fase 3: dados públicos Bybit, persistência, candles e indicadores — implementados.", "Fase 2.1: datasets históricos aprovados — implementados.", "Fase 2.2: estratégias experimentais e backtesting offline — implementados.", "Próximas fases: Arena, sinais operacionais e paper trading — planejados.", "Carteira e ordens somente leitura — planejadas.", "Ampliar testes do motor, segurança e interface a cada entrega."] },
+    items: ["Fase 1: arquitetura, regras de segurança e estrutura de processos — implementadas.", "Fase 2: design system e dashboard responsivo — implementados.", "Fase 3: dados públicos Bybit, persistência, candles e indicadores — implementados.", "Fase 2.1: datasets históricos aprovados — implementados.", "Fase 2.2: estratégias experimentais e backtesting offline — implementados.", "Fases 2.3A e 2.3B: Arena histórica e interface — implementadas.", "Sinais operacionais e paper trading — planejados.", "Carteira e ordens somente leitura — planejadas.", "Ampliar testes do motor, segurança e interface a cada entrega."] },
 };
 
 export default async function ModulePage({ params }: { params: Promise<{ module: string }> }) {
