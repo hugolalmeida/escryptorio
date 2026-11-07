@@ -28,8 +28,8 @@ backend/
   cryptolab/engine/        indicadores, contratos, estratégias e replay puros
   cryptolab/research/      protocolo, persistência imutável e CLI/API offline
   cryptolab/arena/         competição histórica sobre ResearchService; CLI/API locais
-  cryptolab/paper/         carteiras virtuais e ledger local; CLI de criação/consulta
-  cryptolab/monitor/       avaliação informativa de snapshots locais; CLI --once
+  cryptolab/paper/         carteiras, ledger e planejador condicional somente de leitura
+  cryptolab/monitor/       avaliação informativa de snapshots locais; CLI --once/--loop
   cryptolab/storage.py     transactions, snapshots e datasets
   cryptolab/migrations/    SQL incremental versionado
   tests/                   referência matemática, temporalidade, API e segurança
