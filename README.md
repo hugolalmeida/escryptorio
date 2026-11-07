@@ -57,7 +57,11 @@ Para produção local: `npm run build`, depois `npm start`, mantendo API e worke
 - Datasets históricos aprovados com 100% de cobertura, SHA-256, manifesto e proteção SQL contra alteração; leitor offline para o futuro motor quantitativo. Snapshots do dashboard permanecem separados.
 - Backtesting offline de Trend, RSI, Breakout e Buy & Hold, com indicadores causais, custos, stop/alvo, limites de instrumento e janelas cronológicas. Protocolos e resultados imutáveis por SHA-256; nenhuma rede durante o replay.
 
-A Arena histórica possui interface, CLI e API offline. Sinais operacionais, paper trading e carteira privada **ainda não executam suas funções**. Mack permanece não validada. Não há rota de ordem, cliente autenticado ou toggle para ativar trading. Um backtest é pesquisa histórica, não validação de rentabilidade.
+A Arena histórica possui interface, CLI e API offline. Paper trading conta com fundação local de carteiras e ledger, sem worker ou operações automáticas. Sinais operacionais e carteira privada **ainda não executam suas funções**. Mack permanece não validada. Não há rota de ordem, cliente autenticado ou toggle para ativar trading. Um backtest é pesquisa histórica, não validação de rentabilidade.
+
+## Carteiras paper locais · Fase 2.3C1
+
+Carteiras virtuais começam pausadas e têm ledger imutável com sequência, idempotência e verificação SHA-256. A CLI apenas cria e consulta; não coleta preços nem executa operações. O patrimônio de uma posição sem preço de marcação informado permanece indefinido. Comandos PowerShell, política de custos e limitações em [docs/PAPER.md](docs/PAPER.md).
 
 ## Arena histórica offline · Fases 2.3A e 2.3B
 
