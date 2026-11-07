@@ -1,0 +1,7 @@
+{
+  "bot_id": "trend-btc-01",
+  "symbol": "BTCUSDT",
+  "interval": "60",
+  "strategy": "trend",
+  "strategy_version": "1"
+}

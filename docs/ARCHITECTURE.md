@@ -1,6 +1,6 @@
 # Arquitetura · CryptoLab
 
-Decisão de 01/11/2026, atualizada na Fase 2.3C1. Aplicação local Windows, usuário único, somente Bybit Spot. As fases 2.1 e 2.2 acrescentaram histórico, estratégias experimentais e replay offline; as fases 2.3A e 2.3B entregaram a Arena histórica; a 2.3C1 acrescenta a fundação do ledger de carteiras virtuais.
+Decisão de 01/11/2026, atualizada na Fase 2.3C2A. Aplicação local Windows, usuário único, somente Bybit Spot. As fases 2.1 e 2.2 acrescentaram histórico, estratégias experimentais e replay offline; as fases 2.3A e 2.3B entregaram a Arena histórica; a 2.3C1 acrescentou a fundação do ledger de carteiras virtuais e a 2.3C2A o monitor informativo de candles.
 
 ```mermaid
 flowchart LR
@@ -29,6 +29,7 @@ backend/
   cryptolab/research/      protocolo, persistência imutável e CLI/API offline
   cryptolab/arena/         competição histórica sobre ResearchService; CLI/API locais
   cryptolab/paper/         carteiras virtuais e ledger local; CLI de criação/consulta
+  cryptolab/monitor/       avaliação informativa de snapshots locais; CLI --once
   cryptolab/storage.py     transactions, snapshots e datasets
   cryptolab/migrations/    SQL incremental versionado
   tests/                   referência matemática, temporalidade, API e segurança
@@ -60,6 +61,8 @@ Na Fase 2.3A, a Arena histórica cria ou aceita quatro protocolos, executa trein
 
 Na Fase 2.3C1, `paper` adiciona carteiras pausadas por padrão, ledger append-only com transições Decimal e reconstrução verificada. `paper_wallets`, `paper_events` e `paper_heads` usam a migration 005 e transações atômicas; a CLI cria e consulta. Não há worker, API, integração de candles ou execução automática. Detalhes e limites em [PAPER.md](PAPER.md).
 
+Na Fase 2.3C2A, `monitor` lê somente snapshots já coletados, valida frescor, sequência e hash e avalia causalmente condições para posição hipotética. Sinais informativos são imutáveis e idempotentes em `monitor_signals`; o monitor não acessa o ledger paper nem cria fills. Não há serviço em loop nesta fase. Detalhes em [MONITOR.md](MONITOR.md).
+
 ## Motor e fórmulas
 
 Valores financeiros são Decimal em contexto local de 34 dígitos; serialização JSON como strings. `float` é permitido somente na apresentação. SMA: média dos últimos N fechamentos. EMA: semente SMA dos primeiros N; alpha=2/(N+1). RSI de Wilder: média inicial de N ganhos/perdas, atualização `(anterior*(N−1)+atual)/N`; mercado constante retorna 50, somente ganhos 100, somente perdas 0. ATR: primeiro TR=high−low; demais TR incluem gaps para fechamento anterior; semente média de N e suavização de Wilder. Warm-up retorna ausente, não zero.
@@ -79,6 +82,7 @@ Tendência é descritiva: alta se fechamento>SMA20>EMA50; baixa se fechamento<SM
 | 2.3A | Backend da Arena histórica com custos equivalentes | Implementado |
 | 2.3B | Interface da Arena histórica | Implementada |
 | 2.3C1 | Fundação de carteiras e ledger paper | Implementada; sem execução contínua |
+| 2.3C2A | Monitor informativo de candles e sinais | Implementado; sem movimentar carteiras |
 | 5 | Paper trading contínuo | Planejada |
 | 6 | Permissões, elegibilidade, carteira e ordens somente leitura | Planejada; nenhuma credencial solicitada |
 | 7 | Verificação progressiva do motor, segurança e UI | Base implementada; expandir nas próximas fases |

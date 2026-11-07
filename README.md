@@ -63,6 +63,17 @@ A Arena histórica possui interface, CLI e API offline. Paper trading conta com 
 
 Carteiras virtuais começam pausadas e têm ledger imutável com sequência, idempotência e verificação SHA-256. A CLI apenas cria e consulta; não coleta preços nem executa operações. O patrimônio de uma posição sem preço de marcação informado permanece indefinido. Comandos PowerShell, política de custos e limitações em [docs/PAPER.md](docs/PAPER.md).
 
+## Monitor local de sinais · Fase 2.3C2A
+
+O monitor avalia o último candle fechado de snapshots públicos existentes, recusando dados obsoletos e lacunas. Os sinais são condicionais e informativos: nenhuma posição é consultada, nenhuma carteira é movimentada e nenhum fill é criado. Com o worker público e snapshot fresco:
+
+```powershell
+.\.venv\Scripts\python.exe -m cryptolab.monitor --once --config docs/monitor-example.json
+.\.venv\Scripts\python.exe -m cryptolab.monitor --signals --bot trend-btc-01
+```
+
+Diagnóstico, validação, idempotência e limites de retomada em [docs/MONITOR.md](docs/MONITOR.md). Não existe loop automático nesta etapa.
+
 ## Arena histórica offline · Fases 2.3A e 2.3B
 
 Em **http://127.0.0.1:3100/arena**, selecione um dataset aprovado, revise as janelas e as premissas comuns e ajuste os parâmetros individuais. Crie o experimento para congelar os protocolos; depois execute e consulte os rankings de treino, validação e teste fora da amostra. Os gráficos usam execuções persistidas, e o histórico permite reabri-las. Cada estratégia recebe capital virtual independente. Se uma execução exceder o tempo, consulte o resultado antes de tentar novamente; não há reexecução automática. Reinicie API e frontend após atualizar o projeto.
