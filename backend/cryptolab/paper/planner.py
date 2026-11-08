@@ -18,7 +18,7 @@ from cryptolab.paper.planner_models import PlannerBinding, reject_float
 from cryptolab.paper.storage import PaperError, PaperStore
 from cryptolab.storage import Store
 
-VERSION = "cryptolab-paper-planner/2"
+VERSION = "cryptolab-paper-planner/3"
 
 
 class PlannerError(ValueError):
@@ -250,7 +250,8 @@ class VirtualTradePlanner:
             "decision_key":digest({"signal_id":signal_id,"wallet_id":wallet["wallet_id"]})[0],
             "risk":binding.risk.model_dump(mode="json"), "action":decision.action.upper(), "reason":decision.reason,
             "decision_candle":signal["candle_time"], "earliest_fill_candle":signal["decision_time"], "expires_at":signal["valid_until"],
-            "dataset_id":signal["dataset_id"], "instrument_hash":rules.source_hash, "instrument_source_time_ms":rules.source_time_ms,
+            "dataset_id":signal["dataset_id"], "snapshot_hash":digest(snapshot.model_dump(mode="json"))[0],
+            "instrument_hash":rules.source_hash, "instrument_source_time_ms":rules.source_time_ms,
             "ticker_price":decimal_text(snapshot.ticker.price),
             "exposure_limit_exceeded":exposure_exceeded,
             "market_source_time_ms":snapshot.source_time_ms, "ticker_source_time_ms":snapshot.ticker.source_time_ms,
