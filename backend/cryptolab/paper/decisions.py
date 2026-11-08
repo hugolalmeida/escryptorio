@@ -294,51 +294,67 @@ class DecisionService:
     def record_decision(self, binding_id: str, signal_id: str, expected_validation_hash: str) -> dict:
         _identifier(binding_id); _identifier(signal_id); _identifier(expected_validation_hash)
         try:
-            # Commit observed time and expiration even if the subsequent request
-            # is rejected. Otherwise rollback could erase an observed expiry.
-            expired = self._observe_expiry(binding_id, signal_id)
-            if expired:
-                raise DecisionError("DECISION_EXPIRED")
+            # Retain observed time even when a later request fails and rolls back.
+            with self.store.connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                self._time(db)
+            conflict = False
+            receipt = None
             with self.store.connect() as db:
                 db.execute("BEGIN IMMEDIATE")
                 now = self._time(db)
                 binding = self._binding(db,binding_id)
-                if binding["state"] != "ACTIVE":
-                    raise DecisionError("BINDING_NOT_ACTIVE")
-                if binding["planner_version"] != PLANNER_VERSION:
-                    raise DecisionError("PLANNER_VERSION_INCOMPATIBLE")
-                contract = PlannerBinding.model_validate(binding["binding"])
-                proposal, snapshot = self._calculate(db, contract, signal_id, now)
-                if proposal["validation_hash"] != expected_validation_hash:
-                    raise DecisionError("PROPOSAL_CHANGED")
-                if proposal["status"] not in ("HOLD","CONDITIONAL_REVALIDATION_REQUIRED"):
-                    raise DecisionError("PROPOSAL_NOT_RECORDABLE")
-                row = db.execute("SELECT id FROM paper_decisions WHERE wallet_id=? AND candle_time=?", (contract.wallet_id,proposal["decision_candle"])).fetchone()
-                if row:
-                    old = self._decision(db,row[0])
-                    if old["binding_id"] != binding_id or old["signal_id"] != signal_id or old["proposal"] != proposal:
-                        raise DecisionError("DECISION_CONFLICT")
-                    if old["state"] != "RECORDED":
-                        raise DecisionError("DECISION_NOT_CURRENT")
+                # The unique wallet/candle key is checked before any financial
+                # recalculation. Matching receipts remain historical facts even
+                # when the wallet, binding or market later changes.
+                rows = db.execute("""SELECT id FROM paper_decisions WHERE wallet_id=? AND
+                    (signal_id=? OR candle_time=(SELECT candle_time FROM monitor_signals WHERE id=?))""",
+                    (binding["wallet_id"],signal_id,signal_id)).fetchall()
+                if len(rows) > 1:
+                    raise DecisionError("DECISION_UNIQUENESS_INTEGRITY_ERROR")
+                if rows:
+                    old = self._decision(db,rows[0][0])
+                    check = self._time(db)
+                    if old["state"] == "RECORDED" and check >= old["proposal"]["expires_at"]*1000:
+                        self._event(db,"decision",old["id"],"EXPIRED",check,"SIGNAL_EXPIRED")
+                        old = self._decision(db,old["id"])
+                    conflict = (old["binding_id"] != binding_id or old["signal_id"] != signal_id
+                                or old["proposal"]["validation_hash"] != expected_validation_hash)
+                    if not conflict:
+                        wallet, _ = self.paper._replay(db,binding["wallet_id"])
+                        receipt = {**old, "receipt_mode":"RECOVER_EXISTING_RECEIPT", "execution_enabled":False,
+                                   "needs_revalidation":True, "binding_state":binding["state"],
+                                   "wallet_state":wallet["state"]["state"], "wallet_sequence_current":wallet["sequence"],
+                                   "wallet_head_hash_current":wallet["head_hash"]}
+                else:
+                    if binding["state"] != "ACTIVE":
+                        raise DecisionError("BINDING_NOT_ACTIVE")
+                    if binding["planner_version"] != PLANNER_VERSION:
+                        raise DecisionError("PLANNER_VERSION_INCOMPATIBLE")
+                    contract = PlannerBinding.model_validate(binding["binding"])
+                    proposal, snapshot = self._calculate(db, contract, signal_id, now)
+                    if proposal["validation_hash"] != expected_validation_hash:
+                        raise DecisionError("PROPOSAL_CHANGED")
+                    if proposal["status"] not in ("HOLD","CONDITIONAL_REVALIDATION_REQUIRED"):
+                        raise DecisionError("PROPOSAL_NOT_RECORDABLE")
+                    body = {"schema_version":1,"service_version":VERSION,"registered_at_ms":now,
+                            "wallet_id":contract.wallet_id,"binding_id":binding_id,"binding_version":binding["version"],
+                            "signal_id":signal_id,"signal_hash":signal_id,"config_hash":contract.monitor_config_hash,
+                            "candle_time":proposal["decision_candle"],"proposal":proposal,
+                            "market_snapshot":snapshot.model_dump(mode="json")}
+                    identifier,payload = digest(body)
+                    db.execute("INSERT INTO paper_decisions VALUES (?,?,?,?,?,?,?)", (identifier,contract.wallet_id,binding_id,signal_id,contract.monitor_config_hash,proposal["decision_candle"],payload))
+                    self._event(db,"decision",identifier,"RECORDED",now)
                     check = self._time(db)
                     latest, _ = self._calculate(db,contract,signal_id,check)
                     if latest != proposal:
                         raise DecisionError("PROPOSAL_CHANGED")
-                    return old
-                body = {"schema_version":1,"service_version":VERSION,"registered_at_ms":now,
-                        "wallet_id":contract.wallet_id,"binding_id":binding_id,"binding_version":binding["version"],
-                        "signal_id":signal_id,"signal_hash":signal_id,"config_hash":contract.monitor_config_hash,
-                        "candle_time":proposal["decision_candle"],"proposal":proposal,
-                        "market_snapshot":snapshot.model_dump(mode="json")}
-                identifier,payload = digest(body)
-                db.execute("INSERT INTO paper_decisions VALUES (?,?,?,?,?,?,?)", (identifier,contract.wallet_id,binding_id,signal_id,contract.monitor_config_hash,proposal["decision_candle"],payload))
-                self._event(db,"decision",identifier,"RECORDED",now)
-                # Recheck actual clock and all premises while the write lock is held.
-                check = self._time(db)
-                latest, _ = self._calculate(db,contract,signal_id,check)
-                if latest != proposal:
-                    raise DecisionError("PROPOSAL_CHANGED")
-                return self._decision(db,identifier)
+                    receipt = {**self._decision(db,identifier), "receipt_mode":"REGISTER_NEW_DECISION",
+                               "execution_enabled":False, "needs_revalidation":True}
+            # A conflict is raised after commit so an observed expiry is not lost.
+            if conflict:
+                raise DecisionError("DECISION_CONFLICT")
+            return receipt
         except DecisionError:
             raise
         except (PlannerError, PaperError) as exc:
@@ -347,22 +363,6 @@ class DecisionService:
             raise DecisionError("DECISION_CONFLICT") from None
         except sqlite3.Error:
             raise DecisionError("DECISION_DATABASE_ERROR") from None
-
-    def _observe_expiry(self, binding_id: str, signal_id: str) -> bool:
-        with self.store.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            now = self._time(db)
-            binding = self._binding(db,binding_id)
-            signal = db.execute("SELECT candle_time FROM monitor_signals WHERE id=?", (signal_id,)).fetchone()
-            row = db.execute("SELECT id FROM paper_decisions WHERE wallet_id=? AND candle_time=?",
-                             (binding["wallet_id"],signal["candle_time"])).fetchone() if signal else None
-            if row:
-                item = self._decision(db,row["id"])
-                if item["state"] == "RECORDED" and now >= item["proposal"]["expires_at"]*1000:
-                    self._event(db,"decision",item["id"],"EXPIRED",now,"SIGNAL_EXPIRED")
-                    return True
-                return item["state"] == "EXPIRED"
-            return False
 
     def _calculate(self, db, binding, signal_id, now):
         signal, config = SignalValidator(self.store).validate(db,signal_id,binding,now)

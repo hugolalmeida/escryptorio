@@ -40,6 +40,8 @@ Para Buy & Hold, a política futura será uma única entrada ao iniciar sem posi
 
 `validation_hash` identifica o conteúdo completo da proposta, incluindo sinal, vínculo, custos, premissas de mercado e hash/sequência do ledger. `decision_key` identifica o par sinal/carteira. A mesma entrada íntegra gera o mesmo resultado; uma alteração no ledger ou mercado gera outro hash ou bloqueio. O tempo pode invalidar uma proposta sem alterar seu hash. O consumidor futuro deverá refazer integralmente essas verificações e não confiar em resultado guardado.
 
+Após o commit de uma decisão, recuperação de recibo usa o `validation_hash` **original**: não recalcula a proposta para obter preço novo. Um recibo íntegro pode continuar consultável após alteração do mercado ou carteira, inclusive expirado ou invalidado, mas não constitui autorização; veja [PAPER_BINDINGS.md](PAPER_BINDINGS.md).
+
 A versão `cryptolab-paper-planner/3` inclui o hash do snapshot público integral para detectar alterações entre consulta e registro transacional. A versão 2 identifica exposição pós-custos e venda redutora; resultados das versões anteriores não são reinterpretados. Qualquer alteração de cálculo, elegibilidade ou semântica deve criar nova versão.
 
 **Consultas do planner continuam sem persistência:** dois arquivos de vínculo diferentes podem produzir análises alternativas com a mesma `decision_key`, ambas não executáveis. A Fase 2.3C2B2A introduz um registro independente de vínculo ativo e decisão única, revalidado sob transação; veja [PAPER_BINDINGS.md](PAPER_BINDINGS.md). A conferência de duas leituras do planner não substitui revalidação atômica na gravação ou em qualquer operação futura.

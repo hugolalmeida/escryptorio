@@ -4,6 +4,7 @@ import sqlite3
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from decimal import Decimal
 
 import pytest
 
@@ -124,7 +125,9 @@ def test_invalidation_expiry_and_clock_rewind(services):
     invalid=service.invalidate_decision(item["id"],"MANUAL_REVIEW")
     assert invalid["state"] == "INVALIDATED" and invalid["events"][-1]["reason"] == "MANUAL_REVIEW"
     assert service.get_decision(item["id"])["state"] == "INVALIDATED"
-    with pytest.raises(DecisionError,match="DECISION_NOT_CURRENT"): record(s,service,binding)
+    recovered=record(s,service,binding)
+    assert recovered["id"] == item["id"] and recovered["state"] == "INVALIDATED"
+    assert recovered["receipt_mode"] == "RECOVER_EXISTING_RECEIPT" and recovered["execution_enabled"] is False
 
 
 def test_expiry_persisted_and_cannot_rewind(services):
@@ -137,13 +140,13 @@ def test_expiry_persisted_and_cannot_rewind(services):
     with pytest.raises(DecisionError,match="CLOCK_ROLLBACK"): service.get_decision(item["id"])
 
 
-def test_expiry_observed_on_failed_repeat_is_committed(services):
+def test_expiry_observed_on_repeat_is_committed(services):
     s,service=services
     binding=active(s,service); proposal=plan(s)
     item=service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
     s[7][0]=item["proposal"]["expires_at"]*1000
-    with pytest.raises(DecisionError,match="DECISION_EXPIRED"):
-        service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+    recovered=service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+    assert recovered["id"] == item["id"] and recovered["state"] == "EXPIRED"
     s[7][0]-=1000
     with pytest.raises(DecisionError,match="CLOCK_ROLLBACK"):
         service.get_decision(item["id"])
@@ -226,6 +229,105 @@ def test_concurrent_processes_same_decision(services):
         ids=list(pool.map(run,range(3)))
     assert len(set(ids)) == 1 and service.verify_integrity()["decisions"] == 1
     assert tables(s[0]) == before
+
+
+def test_commit_without_response_recovers_after_ticker_change_across_processes(services):
+    s,service=services
+    binding=active(s,service); proposal=plan(s); before=tables(s[0])
+    script = ("import os,sys; from pathlib import Path; from cryptolab.paper.decisions import DecisionService; "
+              "s=DecisionService(Path(sys.argv[1]),clock=lambda:int(sys.argv[5])); "
+              "s.record_decision(sys.argv[2],sys.argv[3],sys.argv[4]); os._exit(74)")
+    args=[sys.executable,"-c",script,str(s[0].path),binding["id"],s[4]["id"],proposal["validation_hash"],str(s[7][0])]
+    stopped=subprocess.run(args,text=True,capture_output=True,timeout=30)
+    assert stopped.returncode == 74 and not stopped.stdout
+    with s[0].connect() as db:
+        original=db.execute("SELECT id FROM paper_decisions").fetchone()[0]
+    ticker=s[2].ticker.model_copy(update={"price":s[2].ticker.price+Decimal("0.1"), "source_time_ms":s[7][0]+1000})
+    s[7][0]+=1000
+    s[0].save(s[2].model_copy(update={"ticker":ticker,"fetched_at_ms":s[7][0],"source_time_ms":s[7][0]}))
+    assert plan(s)["validation_hash"] != proposal["validation_hash"]
+    retry=("import json,sys; from pathlib import Path; from cryptolab.paper.decisions import DecisionService; "
+           "s=DecisionService(Path(sys.argv[1]),clock=lambda:int(sys.argv[5])); "
+           "print(json.dumps(s.record_decision(sys.argv[2],sys.argv[3],sys.argv[4])))")
+    args[2]=retry; args[7]=str(s[7][0])
+    def run(_):
+        return json.loads(subprocess.run(args,text=True,capture_output=True,check=True,timeout=30).stdout)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        recovered=list(pool.map(run,range(2)))
+    assert all(r["id"] == original and r["receipt_mode"] == "RECOVER_EXISTING_RECEIPT" for r in recovered)
+    assert all(r["state"] == "RECORDED" and r["execution_enabled"] is False and r["needs_revalidation"] is True for r in recovered)
+    assert service.verify_integrity()["decisions"] == 1 and tables(s[0]) == before
+
+
+def test_recovery_after_ledger_change_pause_and_binding_disabled(services,monkeypatch):
+    s,service=services
+    binding=active(s,service); proposal=plan(s)
+    original=service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+    s[1].append(s[5]["wallet_id"],"fixture-mark",MarkRecord(price=str(s[2].ticker.price),candle_time=s[4]["decision_time"],event_time=s[7][0]//1000))
+    s[1].append(s[5]["wallet_id"],"fixture-pause",StateRecord(state="paused",event_time=s[7][0]//1000))
+    service.disable_binding(binding["id"],"MANUAL_STOP")
+    before=tables(s[0])
+    monkeypatch.setattr(service,"_calculate",lambda *args: pytest.fail("Recuperação não pode recalcular"))
+    recovered=service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+    assert recovered["id"] == original["id"] and recovered["state"] == "RECORDED"
+    assert recovered["receipt_mode"] == "RECOVER_EXISTING_RECEIPT" and recovered["execution_enabled"] is False
+    assert recovered["needs_revalidation"] is True and recovered["binding_state"] == "DISABLED"
+    assert recovered["wallet_state"] == "paused" and recovered["wallet_sequence_current"] > original["proposal"]["wallet_sequence"]
+    assert tables(s[0]) == before
+
+
+def test_recovery_rejects_other_hash_and_different_signal(services):
+    s,service=services
+    binding=active(s,service); proposal=plan(s)
+    original=service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+    before=tables(s[0])
+    with pytest.raises(DecisionError,match="DECISION_CONFLICT"):
+        service.record_decision(binding["id"],s[4]["id"],"0"*64)
+    config=s[3].model_copy(update={"parameters":StrategyParameters(fast=2,slow=4,trend_entry="state")})
+    other=MonitorRuntime(s[0],clock=lambda:s[7][0]).once(config)
+    with pytest.raises(DecisionError,match="DECISION_CONFLICT"):
+        service.record_decision(binding["id"],other["id"],proposal["validation_hash"])
+    assert service.get_decision(original["id"])["id"] == original["id"] and tables(s[0]) == before
+
+
+def test_recovery_conflict_observes_expiry_and_cannot_rewind(services):
+    s,service=services
+    binding=active(s,service); proposal=plan(s)
+    item=service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+    s[7][0]=item["proposal"]["expires_at"]*1000
+    with pytest.raises(DecisionError,match="DECISION_CONFLICT"):
+        service.record_decision(binding["id"],s[4]["id"],"0"*64)
+    assert service.get_decision(item["id"])["state"] == "EXPIRED"
+    s[7][0]-=1000
+    with pytest.raises(DecisionError,match="CLOCK_ROLLBACK"):
+        service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+
+
+def test_failed_new_request_preserves_observed_clock(services):
+    s,service=services
+    binding=active(s,service); proposal=plan(s)
+    item=service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+    s[7][0]=item["proposal"]["expires_at"]*1000
+    with pytest.raises(DecisionError,match="SIGNAL_NOT_FOUND"):
+        service.record_decision(binding["id"],"0"*64,proposal["validation_hash"])
+    s[7][0]-=1000
+    with pytest.raises(DecisionError,match="CLOCK_ROLLBACK"):
+        service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+
+
+@pytest.mark.parametrize("tamper",["payload","checkpoint"])
+def test_recovery_rejects_tampering(services,tamper):
+    s,service=services
+    binding=active(s,service); proposal=plan(s)
+    item=service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
+    with s[0].connect() as db:
+        if tamper == "payload":
+            db.execute("DROP TRIGGER paper_decisions_no_update")
+            db.execute("UPDATE paper_decisions SET payload='{}' WHERE id=?",(item["id"],))
+        else:
+            db.execute("UPDATE paper_decision_heads SET event_hash=? WHERE decision_id=?",("0"*64,item["id"]))
+    with pytest.raises(DecisionError,match="INTEGRITY_ERROR"):
+        service.record_decision(binding["id"],s[4]["id"],proposal["validation_hash"])
 
 
 def test_market_snapshot_changed_between_plan_and_record(services):
@@ -338,7 +440,12 @@ def test_cli_binding_decision_and_live_guard(services,tmp_path,monkeypatch,capsy
     rc,activated=command("activate-binding","--id",binding["id"]); assert rc == 0 and activated["state"] == "ACTIVE"
     proposal=plan(s)
     rc,decision=command("record-decision","--binding-id",binding["id"],"--signal",s[4]["id"],"--validation-hash",proposal["validation_hash"])
-    assert rc == 0 and decision["state"] == "RECORDED"
+    assert rc == 0 and decision["state"] == "RECORDED" and decision["receipt_mode"] == "REGISTER_NEW_DECISION"
+    ticker=s[2].ticker.model_copy(update={"high_24h":s[2].ticker.high_24h+1})
+    s[0].save(s[2].model_copy(update={"ticker":ticker}))
+    rc,receipt=command("record-decision","--binding-id",binding["id"],"--signal",s[4]["id"],"--validation-hash",proposal["validation_hash"])
+    assert rc == 0 and receipt["id"] == decision["id"] and receipt["receipt_mode"] == "RECOVER_EXISTING_RECEIPT"
+    assert receipt["execution_enabled"] is False and receipt["needs_revalidation"] is True
     assert command("verify")[1]["valid"] and tables(s[0]) == before
     monkeypatch.setenv("LIVE_TRADING_ENABLED","true")
     with pytest.raises(RuntimeError): command("list-bindings")
