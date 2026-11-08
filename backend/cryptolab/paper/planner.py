@@ -18,7 +18,7 @@ from cryptolab.paper.planner_models import PlannerBinding, reject_float
 from cryptolab.paper.storage import PaperError, PaperStore
 from cryptolab.storage import Store
 
-VERSION = "cryptolab-paper-planner/1"
+VERSION = "cryptolab-paper-planner/2"
 
 
 class PlannerError(ValueError):
@@ -232,12 +232,16 @@ class VirtualTradePlanner:
         equity = cash + quantity*snapshot.ticker.price
         if equity <= 0:
             raise PlannerError("INSUFFICIENT_EQUITY")
-        if quantity*snapshot.ticker.price > equity*risk.exposure_fraction:
-            raise PlannerError("EXPOSURE_LIMIT_EXCEEDED")
         try:
             decision = Decision.model_validate(signal["if_long"] if quantity else signal["if_flat"])
         except (ValueError, KeyError):
             raise PlannerError("SIGNAL_DECISION_INVALID") from None
+        exposure_exceeded = quantity*snapshot.ticker.price > equity*risk.exposure_fraction
+        if decision.action == "buy":
+            if exposure_exceeded:
+                raise PlannerError("EXPOSURE_LIMIT_EXCEEDED")
+            if quantity:
+                raise PlannerError("POSITION_ALREADY_OPEN")
         body = {"schema_version":1, "planner_version":VERSION, "signal_id":signal_id, "wallet_id":wallet["wallet_id"],
             "wallet_hash":wallet["wallet_hash"], "wallet_sequence":wallet["sequence"], "wallet_head_hash":wallet["head_hash"],
             "bot_id":config.bot_id, "symbol":config.symbol, "interval":config.interval,
@@ -248,6 +252,7 @@ class VirtualTradePlanner:
             "decision_candle":signal["candle_time"], "earliest_fill_candle":signal["decision_time"], "expires_at":signal["valid_until"],
             "dataset_id":signal["dataset_id"], "instrument_hash":rules.source_hash, "instrument_source_time_ms":rules.source_time_ms,
             "ticker_price":decimal_text(snapshot.ticker.price),
+            "exposure_limit_exceeded":exposure_exceeded,
             "market_source_time_ms":snapshot.source_time_ms, "ticker_source_time_ms":snapshot.ticker.source_time_ms,
             "execution_enabled":False, "needs_revalidation":True,
             "invalidation":"Expiração, mudança de ledger/configuração, preço ou limite; revalidar tudo antes de qualquer etapa futura.",
@@ -267,8 +272,9 @@ class VirtualTradePlanner:
             raise PlannerError("INVALID_ESTIMATED_PRICE")
         if decision.action == "buy":
             if config.strategy == "buy_hold":
-                body.update(status="RISK_STOP_UNAVAILABLE", reference_price=decimal_text(reference), planned_quantity=None,
-                            missing=["Política de risco independente para Buy & Hold"])
+                body.update(status="BUY_HOLD_POLICY_REQUIRED", reference_price=decimal_text(reference), planned_quantity=None,
+                            planned_stop=None, planned_target=None,
+                            missing=["Política de alocação e perda máxima para Buy & Hold ainda não implementada"])
                 return self._finish(body)
             stop = _floor(estimated_price*(D(1)-config.parameters.stop_fraction), rules.price_tick)
             target = _ceil(estimated_price*(D(1)+config.parameters.target_fraction), rules.price_tick)
@@ -276,7 +282,9 @@ class VirtualTradePlanner:
                 raise PlannerError("STOP_INVALID")
             exit_price = _floor(stop*(D(1)-slip), rules.price_tick)
             loss_per_unit = estimated_price-exit_price+fee*(estimated_price+exit_price)
-            available = min(cash/(estimated_price*(D(1)+fee)), equity*risk.exposure_fraction/estimated_price,
+            # Exposure is measured against post-cost equity at the reference price.
+            exposure_unit = reference + risk.exposure_fraction*(estimated_price*(D(1)+fee)-reference)
+            available = min(cash/(estimated_price*(D(1)+fee)), equity*risk.exposure_fraction/exposure_unit,
                             equity*risk.risk_fraction/loss_per_unit, rules.max_quantity)
             planned = _floor(available, rules.quantity_step)
             body.update(planned_stop=decimal_text(stop), planned_target=decimal_text(target),

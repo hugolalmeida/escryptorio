@@ -264,3 +264,108 @@ def test_position_selects_long_decision(setup_planner, strategy, expected):
     assert result["action"] == expected and result["status"] == ("HOLD" if expected == "HOLD" else "CONDITIONAL_REVALIDATION_REQUIRED")
     if expected == "SELL": assert D(result["planned_quantity"]) <= D(1)
     assert tables(store) == before
+
+
+def positioned_scenario(s, strategy="trend", stale_mark=False):
+    """Apenas fixtures sintéticas para testar o planner com posição existente."""
+    store,paper,snapshot,_,_,_,_,clock=s
+    candles=list(snapshot.candles)
+    if strategy == "trend":
+        for index, price in ((-4,"190"),(-3,"170"),(-2,"150")):
+            old=candles[index]; p=D(price)
+            candles[index]=Candle(time=old.time,open=p,high=p+1,low=p-1,close=p,volume=old.volume,turnover=old.turnover,closed=True)
+    ticker=snapshot.ticker.model_copy(update={"price":candles[-2].close})
+    store.save(snapshot.model_copy(update={"candles":candles,"ticker":ticker,"dataset_id":canonical_dataset("BTCUSDT","60",candles)[0]}))
+    config=MonitorConfig(bot_id="risk-position",symbol="BTCUSDT",interval="60",strategy=strategy,
+        parameters=StrategyParameters(fast=2,slow=3,trend_entry="state"))
+    signal=MonitorRuntime(store,clock=lambda:clock[0]).once(config)
+    wallet=paper.create_wallet(WalletSpec(bot_id=config.bot_id,strategy=strategy,symbol="BTCUSDT",interval="60",initial_capital="1000",opened_at=0),"risk-position-create")
+    wid=wallet["wallet_id"]
+    paper.append(wid,"active",StateRecord(state="active",event_time=1))
+    paper.append(wid,"fixture-buy",FillRecord(side="buy",quantity="4",price="100",fee="0",reference_price="100",candle_time=3600,event_time=3600))
+    mark_time=clock[0]//1000-(91 if stale_mark else 0)
+    paper.append(wid,"mark",MarkRecord(price=ticker.price,candle_time=signal["candle_time"],event_time=mark_time))
+    binding={"wallet_id":wid,"wallet_hash":wallet["wallet_hash"],"monitor_config_hash":signal["config_hash"],
+             "risk":{"risk_fraction":"0.01","exposure_fraction":"0.1","costs":{"fee_rate":"0.001","slippage_rate":"0.0005"}}}
+    return config,signal,wallet,binding
+
+
+def test_sell_reduces_above_limit_without_ledger_writes(setup_planner):
+    s=setup_planner
+    _,signal,wallet,binding=positioned_scenario(s)
+    before=tables(s[0])
+    result=VirtualTradePlanner(s[0].path,clock=lambda:s[7][0]).plan(wallet["wallet_id"],signal["id"],binding)
+    assert result["action"] == "SELL" and result["exposure_limit_exceeded"] is True
+    assert D("0") < D(result["planned_quantity"]) <= D("4")
+    assert result["execution_enabled"] is False and tables(s[0]) == before
+
+
+def test_buy_cannot_exceed_post_cost_exposure(setup_planner):
+    s=setup_planner
+    s[6]["risk"]["exposure_fraction"]="0.1"
+    before=tables(s[0])
+    result=plan(s)
+    q=D(result["planned_quantity"]); reference=D(result["reference_price"])
+    post_equity=D("1000")-q*D(result["estimated_price"])-D(result["estimated_fee"])+q*reference
+    assert q*reference <= post_equity*D("0.1")
+    assert result["action"] == "BUY" and tables(s[0]) == before
+
+
+def test_buy_when_position_above_limit_is_blocked(setup_planner):
+    s=setup_planner
+    config,signal,wallet,binding=positioned_scenario(s)
+    actual=s[1].wallet(wallet["wallet_id"])
+    snapshot=s[0].load("BTCUSDT","60")
+    from cryptolab.paper.planner import MarketValidator
+    planner=VirtualTradePlanner(s[0].path,clock=lambda:s[7][0])
+    with s[0].connect() as db:
+        _,rules=MarketValidator().validate(db,{k:v for k,v in signal.items() if k != "id"},config,s[7][0])
+    artificial=dict(signal); artificial["if_long"]={"action":"buy","reason":"synthetic invalid decision"}
+    before=tables(s[0])
+    with pytest.raises(PlannerError,match="EXPOSURE_LIMIT_EXCEEDED"):
+        planner._propose(signal["id"],artificial,config,actual,snapshot,rules,PlannerBinding.model_validate(binding),s[7][0])
+    assert tables(s[0]) == before
+
+
+def test_stale_mark_blocks_risk_reducing_sell(setup_planner):
+    s=setup_planner
+    _,signal,wallet,binding=positioned_scenario(s,stale_mark=True)
+    before=tables(s[0])
+    with pytest.raises(PlannerError,match="WALLET_MARK_STALE_OR_UNVERIFIED"):
+        VirtualTradePlanner(s[0].path,clock=lambda:s[7][0]).plan(wallet["wallet_id"],signal["id"],binding)
+    assert tables(s[0]) == before
+
+
+def test_hold_reports_excess_exposure_without_creating_intention(setup_planner):
+    s=setup_planner
+    _,signal,wallet,binding=positioned_scenario(s,strategy="buy_hold")
+    before=tables(s[0])
+    result=VirtualTradePlanner(s[0].path,clock=lambda:s[7][0]).plan(wallet["wallet_id"],signal["id"],binding)
+    assert result["status"] == "HOLD" and result["exposure_limit_exceeded"] is True
+    assert result["planned_quantity"] is None and result["execution_enabled"] is False
+    assert tables(s[0]) == before
+
+
+def test_buy_hold_does_not_invent_stop(setup_planner):
+    s=setup_planner
+    config=MonitorConfig(bot_id="buy-hold-flat",symbol="BTCUSDT",interval="60",strategy="buy_hold")
+    signal=MonitorRuntime(s[0],clock=lambda:s[7][0]).once(config)
+    wallet=s[1].create_wallet(WalletSpec(bot_id=config.bot_id,strategy="buy_hold",symbol="BTCUSDT",interval="60",initial_capital="1000",opened_at=0),"buy-hold-create")
+    s[1].append(wallet["wallet_id"],"active",StateRecord(state="active",event_time=1))
+    binding={"wallet_id":wallet["wallet_id"],"wallet_hash":wallet["wallet_hash"],"monitor_config_hash":signal["config_hash"],"risk":s[6]["risk"]}
+    before=tables(s[0])
+    result=VirtualTradePlanner(s[0].path,clock=lambda:s[7][0]).plan(wallet["wallet_id"],signal["id"],binding)
+    assert result["status"] == "BUY_HOLD_POLICY_REQUIRED" and result["planned_stop"] is None
+    assert result["planned_quantity"] is None and result["execution_enabled"] is False
+    assert tables(s[0]) == before
+
+
+def test_conflicting_risk_bindings_are_identifiable_not_persistently_prevented(setup_planner):
+    s=setup_planner
+    before=tables(s[0]); first=plan(s)
+    s[6]["risk"]["risk_fraction"]="0.02"
+    second=plan(s)
+    assert first["decision_key"] == second["decision_key"]
+    assert first["binding_hash"] != second["binding_hash"] and first["validation_hash"] != second["validation_hash"]
+    assert first["execution_enabled"] is False and second["execution_enabled"] is False
+    assert tables(s[0]) == before
