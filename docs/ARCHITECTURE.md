@@ -28,7 +28,7 @@ backend/
   cryptolab/engine/        indicadores, contratos, estratégias e replay puros
   cryptolab/research/      protocolo, persistência imutável e CLI/API offline
   cryptolab/arena/         competição histórica sobre ResearchService; CLI/API locais
-  cryptolab/paper/         ledger, planejador de leitura e vínculos/decisões auditáveis
+  cryptolab/paper/         ledger, planejador, decisões auditáveis e simulação virtual manual
   cryptolab/monitor/       avaliação informativa de snapshots locais; CLI --once/--loop
   cryptolab/storage.py     transactions, snapshots e datasets
   cryptolab/migrations/    SQL incremental versionado
@@ -62,6 +62,8 @@ Na Fase 2.3A, a Arena histórica cria ou aceita quatro protocolos, executa trein
 Na Fase 2.3C1, `paper` adiciona carteiras pausadas por padrão, ledger append-only com transições Decimal e reconstrução verificada. `paper_wallets`, `paper_events` e `paper_heads` usam a migration 005 e transações atômicas; a CLI cria e consulta. Não há worker, API, integração de candles ou execução automática. Detalhes e limites em [PAPER.md](PAPER.md).
 
 Na Fase 2.3C2B2A, vínculos de planejamento e decisões são persistidos pela migration 008, separadamente do ledger. O registro revalida a proposta sob `BEGIN IMMEDIATE`; não ativa carteiras e não cria operações. Detalhes em [PAPER_BINDINGS.md](PAPER_BINDINGS.md).
+
+Na Fase 2.3C2B2B, a migration 009 acrescenta evidências de marcação e consumo virtual. O executor manual, sujeito a `PAPER_SIMULATION_ENABLED=true`, grava fill fictício e evidência na mesma transação do ledger. Não há worker de execução, APIs privadas ou ordens reais; detalhes em [PAPER_EXECUTION.md](PAPER_EXECUTION.md).
 
 Na Fase 2.3C2A, `monitor` lê somente snapshots já coletados, valida frescor, sequência e hash e avalia causalmente condições para posição hipotética. Sinais informativos são imutáveis e idempotentes em `monitor_signals`; o monitor não acessa o ledger paper nem cria fills. A CLI também oferece loop com lease e recuperação histórica verificada. Detalhes em [MONITOR.md](MONITOR.md).
 

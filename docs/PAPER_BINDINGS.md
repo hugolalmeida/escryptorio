@@ -31,6 +31,8 @@ O registro inicial gera evento `RECORDED`; invalidação explícita gera `INVALI
 
 Bloqueio SQLite, constraints, hashes e revalidação protegem concorrência entre processos, timeout e reinício. Uma falha antes do commit reverte integralmente decisão e evento. Após commit, repetição idêntica retorna o registro. Mesmo com isso, `RECORDED` é só um fato histórico: a futura etapa 2.3C2B2B deverá verificar transacionalmente novamente vínculo, expiração, ledger, preço, limites, idempotência e segurança antes de qualquer efeito virtual. Não existe executor, estado consumido, política implementada de Buy & Hold sem stop nem produtor de marcação nesta entrega.
 
+Na fase posterior 2.3C2B2B, a simulação manual opcional usa um sidecar de consumo e revalida transacionalmente esses fatos; os estados históricos desta tabela não são reescritos. Veja [PAPER_EXECUTION.md](PAPER_EXECUTION.md). A execução real continua inexistente.
+
 ## CLI PowerShell
 
 Os comandos abaixo são modelos; substitua os marcadores por IDs reais e um arquivo JSON de vínculo preenchido pelo operador. Custos são apenas premissas virtuais, nunca taxas reais presumidas. O planner existente é somente leitura; a CLI de decisões aplica migrations pendentes e escreve apenas nas tabelas de vínculo/decisão e metadados de migration.

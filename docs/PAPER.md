@@ -44,4 +44,6 @@ Na Fase 2.3C2B1, [PAPER_PLANNER.md](PAPER_PLANNER.md) descreve o planejador some
 
 Na Fase 2.3C2B2A, [PAPER_BINDINGS.md](PAPER_BINDINGS.md) descreve vínculos e decisões persistidos em tabelas independentes, com revalidação sob transação. Essa camada não movimenta saldos nem cria fills.
 
+Na Fase 2.3C2B2B, [PAPER_EXECUTION.md](PAPER_EXECUTION.md) descreve a simulação manual e exclusivamente virtual, com marcação e fill no ledger somente após validação e habilitação explícita de paper. Não há API privada ou execução real.
+
 Especificar separadamente o produtor de eventos: candles fechados e contíguos, relógio/frescor e fonte verificados, decisão em t e fill mais cedo em t+1, política de taxas/slippage, precisão e mínimos da versão do instrumento, idempotência entre processos, estados de pausa e recuperação. Estudar reconciliação entre eventos e coleta, marcas obsoletas, limites de exposição e modelo de fills antes de conectar qualquer worker. Nenhuma destas funcionalidades foi ativada aqui. Paper permanece distinto de execução real e não autoriza qualquer conexão privada ou envio de ordens.

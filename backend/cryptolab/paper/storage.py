@@ -87,6 +87,14 @@ class PaperStore(Store):
             event["previous_hash"], event["event_hash"]))
 
     def append(self, wallet_id: str, key: str, record: FillRecord | MarkRecord | StateRecord) -> dict:
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            return self.append_in_transaction(db, wallet_id, key, record)
+
+    def append_in_transaction(self, db, wallet_id: str, key: str, record: FillRecord | MarkRecord | StateRecord) -> dict:
+        """Apply an event using the caller's existing atomic write transaction."""
+        if not db.in_transaction:
+            raise PaperError("TRANSACTION_REQUIRED")
         _key(key)
         if isinstance(record, FillRecord):
             kind, model = "fill", FillRecord
@@ -98,26 +106,24 @@ class PaperStore(Store):
             raise PaperError("INVALID_EVENT_TYPE")
         record = model.model_validate(record.model_dump())
         requested = _normalize(record.model_dump())
-        with self.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            view, events = self._replay(db, wallet_id)
-            previous = next((event for event in events if event["idempotency_key"] == key), None)
-            if previous:
-                if previous["kind"] != kind or previous["payload"]["input"] != requested:
-                    raise PaperError("IDEMPOTENCY_CONFLICT")
-                return previous
-            spec = WalletSpec.model_validate(view["spec"])
-            from cryptolab.paper.models import WalletState
-            state = WalletState.model_validate({k:v for k,v in view["state"].items() if k != "equity"})
-            next_state = apply(state, spec, kind, requested)
-            payload = {"input":requested, "before":_state_payload(state), "after":_state_payload(next_state)}
-            event = _event(wallet_id, len(events)+1, key, kind, payload, events[-1]["event_hash"])
-            self._insert(db, event)
-            updated = db.execute("UPDATE paper_heads SET sequence=?,event_hash=? WHERE wallet_id=? AND sequence=? AND event_hash=?",
-                (event["sequence"],event["event_hash"],wallet_id,len(events),events[-1]["event_hash"]))
-            if updated.rowcount != 1:
-                raise PaperError("CHECKPOINT_CONFLICT")
-            return event
+        view, events = self._replay(db, wallet_id)
+        previous = next((event for event in events if event["idempotency_key"] == key), None)
+        if previous:
+            if previous["kind"] != kind or previous["payload"]["input"] != requested:
+                raise PaperError("IDEMPOTENCY_CONFLICT")
+            return previous
+        spec = WalletSpec.model_validate(view["spec"])
+        from cryptolab.paper.models import WalletState
+        state = WalletState.model_validate({k:v for k,v in view["state"].items() if k != "equity"})
+        next_state = apply(state, spec, kind, requested)
+        payload = {"input":requested, "before":_state_payload(state), "after":_state_payload(next_state)}
+        event = _event(wallet_id, len(events)+1, key, kind, payload, events[-1]["event_hash"])
+        self._insert(db, event)
+        updated = db.execute("UPDATE paper_heads SET sequence=?,event_hash=? WHERE wallet_id=? AND sequence=? AND event_hash=?",
+            (event["sequence"],event["event_hash"],wallet_id,len(events),events[-1]["event_hash"]))
+        if updated.rowcount != 1:
+            raise PaperError("CHECKPOINT_CONFLICT")
+        return event
 
     def wallet(self, wallet_id: str) -> dict:
         with self.connect() as db:
