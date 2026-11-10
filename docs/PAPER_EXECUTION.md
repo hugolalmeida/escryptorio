@@ -28,6 +28,8 @@ A versão dos contratos e evidências é `cryptolab-paper-executor/1`. Alteraç�
 
 ## CLI PowerShell
 
+Para um diagnóstico com dados públicos e banco descartável, sem executar fills, consulte [PAPER_OPERATIONAL_VALIDATION.md](PAPER_OPERATIONAL_VALIDATION.md). A autorização para uma operação virtual manual é separada do diagnóstico.
+
 Os marcadores abaixo devem ser substituídos por IDs reais de pesquisa local; não são dados de demonstração nem valores de mercado. Para posição existente, gere o sinal atual, faça a marcação, depois gere e registre uma decisão vinculada à nova sequência:
 
 ```powershell
