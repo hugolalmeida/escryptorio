@@ -65,6 +65,8 @@ Na Fase 2.3C2B2A, vínculos de planejamento e decisões são persistidos pela mi
 
 Na Fase 2.3C2B2B, a migration 009 acrescenta evidências de marcação e consumo virtual. O executor manual, sujeito a `PAPER_SIMULATION_ENABLED=true`, grava fill fictício e evidência na mesma transação do ledger. Não há worker de execução, APIs privadas ou ordens reais; detalhes em [PAPER_EXECUTION.md](PAPER_EXECUTION.md).
 
+Na Fase 2.3C3A, `/paper` consulta projeções GET via proxy Next restrito e FastAPI. As consultas usam SQLite em modo somente leitura, sem executar migrations no handler ou persistir expiração. A página não habilita o executor. Fórmulas, estados e limitações em [PAPER_DASHBOARD.md](PAPER_DASHBOARD.md).
+
 Na Fase 2.3C2A, `monitor` lê somente snapshots já coletados, valida frescor, sequência e hash e avalia causalmente condições para posição hipotética. Sinais informativos são imutáveis e idempotentes em `monitor_signals`; o monitor não acessa o ledger paper nem cria fills. A CLI também oferece loop com lease e recuperação histórica verificada. Detalhes em [MONITOR.md](MONITOR.md).
 
 ## Motor e fórmulas

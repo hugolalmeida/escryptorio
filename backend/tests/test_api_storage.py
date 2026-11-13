@@ -48,7 +48,10 @@ def test_api_health_no_data_and_validation(settings):
             "/api/v1/research/protocols", "/api/v1/research/protocols/{identifier}",
             "/api/v1/research/runs", "/api/v1/research/runs/{identifier}", "/api/v1/research/runs/{identifier}/verify",
             "/api/v1/arena/experiments", "/api/v1/arena/experiments/{identifier}",
-            "/api/v1/arena/experiments/{identifier}/result", "/api/v1/arena/execute"}
+            "/api/v1/arena/experiments/{identifier}/result", "/api/v1/arena/execute",
+            "/api/v1/paper/overview", "/api/v1/paper/wallets/{wid}", "/api/v1/paper/wallets/{wid}/events",
+            "/api/v1/paper/wallets/{wid}/fills", "/api/v1/paper/wallets/{wid}/equity",
+            "/api/v1/paper/signals", "/api/v1/paper/decisions"}
         mutations = {path for path, verbs in paths.items() if set(verbs) != {"get"}}
         assert mutations == {"/api/v1/history/jobs", "/api/v1/history/jobs/{job_id}/{action}",
             "/api/v1/research/protocols", "/api/v1/research/runs", "/api/v1/research/runs/{identifier}/verify",
