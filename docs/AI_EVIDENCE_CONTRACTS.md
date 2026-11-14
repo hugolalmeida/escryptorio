@@ -1,4 +1,6 @@
-# Contratos propostos · não implementados
+# Contratos propostos originalmente
+
+Implementação parcial v1 em [AI_EVIDENCE_IMPLEMENTATION.md](AI_EVIDENCE_IMPLEMENTATION.md): dataset histórico aprovado, relatório determinístico, bundle e verificação offline. Os contratos de LLM, múltiplas fontes, teses e persistência transacional descritos abaixo continuam propostos, não implementados. As identidades implementadas separam conteúdo e captura/geração.
 
 ## Evidence Package v1
 

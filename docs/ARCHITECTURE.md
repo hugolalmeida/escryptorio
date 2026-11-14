@@ -126,3 +126,6 @@ Requer nova autorização explícita e revisão de arquitetura. Um módulo separ
 ## Limites operacionais
 
 Uso privado em loopback, sem autenticação multiusuário; não publicar. API não habilita CORS amplo e valida Host. Proteção adicional e autenticação seriam necessárias antes de qualquer exposição remota. SQLite em OneDrive funciona no ensaio local, mas para coleta contínua mover o banco para disco local não sincronizado por variável de ambiente, igual em API e nos workers. Executar um worker de snapshots por banco; esse coletor original não tem lock de líder. O histórico tem um lease global próprio para serializar CLI/worker histórico, sem bloquear o coletor do dashboard. Backup deve usar mecanismo SQLite consistente, não copiar apenas arquivo `.sqlite3` durante escrita WAL.
+# Evidências determinísticas offline (2.3D1)
+
+`cryptolab.research.evidence` lê dataset histórico aprovado em SQLite somente leitura, congela origem e gera relatório verificável offline. Não há rotas, rede, IA ou execução. Contratos e limites: [AI_EVIDENCE_IMPLEMENTATION.md](AI_EVIDENCE_IMPLEMENTATION.md).

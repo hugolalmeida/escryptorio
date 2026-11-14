@@ -14,3 +14,8 @@
 - Próximo passo: conferir os commits e as pendências em `docs/VERIFICATION.md` antes de receber nova tarefa.
 - Estudo: [AI_RESEARCH_ARCHITECTURE.md](../docs/AI_RESEARCH_ARCHITECTURE.md) e ADRs recomendam relatório determinístico primeiro; decisão de provedor, sandbox, retenção e orçamento continua aberta. D1–D6 não estão autorizadas.
 - Nesta fase: fingerprint local `e3adfd0e20b3cdcad31a596ae3287aabeebcb65abc458f7541f23f063ecc3f62`, links locais e diff verificados; suítes e replays não foram executados. O Git determina o commit final. Referências e limites em `docs/AI_REFERENCE_EVALUATION.md`.
+# Atualização 2.3D1
+
+- Referência inicial: `6faa148dbd217b9df2362d0ba3f493b7f7f6e628`. Consulte o Git para o commit posterior e o estado atual.
+- Evidência histórica e relatório determinístico offline: [AI_EVIDENCE_IMPLEMENTATION.md](../docs/AI_EVIDENCE_IMPLEMENTATION.md). PIT desconhecido; nenhuma IA, execução, migration ou integração paper adicionada.
+- Testes, fingerprint e limitações desta fase em [VERIFICATION.md](../docs/VERIFICATION.md); resultados de fases anteriores não constituem revalidação atual.
