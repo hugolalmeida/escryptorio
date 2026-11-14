@@ -1,0 +1,16 @@
+# Modelo de ameaças · proposta futura
+
+Ameaças pressupõem fontes, respostas de modelo e outros agentes não confiáveis. Sem runtime de IA nesta fase, controles abaixo são **requisitos propostos**, não garantias já implementadas.
+
+| Ameaça / severidade | Exemplo | Mitigação determinística proposta | Teste / risco residual |
+| --- | --- | --- | --- |
+| Prompt injection / alta | fonte ou saída de outro papel tenta alterar política | entrada tratada como dados; schema fechado; nenhum executor, shell ou SQL; instruções com precedência fora da entrada | fixtures adversariais, strings codificadas e campos livres; não há prova geral de imunidade |
+| Exfiltração / alta | prompt inclui arquivos locais, tokens ou dados de carteira | pacote mínimo allowlist; processo segregado sem segredos, ACL read-only, egress bloqueado por padrão; provedor externo só com autorização explícita | teste canário local, inspecionar payload e rede; modelo local também pode vazar se processo tiver acesso |
+| Abuso de ferramenta / crítica | modelo pede ordens, rede irrestrita ou escrita | remover capacidade no SO/processo, sem executor, imports acessíveis, banco gravável, shell ou credenciais; allowlist vazia por padrão | tentar invocar ferramenta, rede e mutação; fronteira precisa ser efetivamente testada no Windows |
+| Integridade financeira / crítica | PnL inventado, preço de outro instante, mudança de ledger | cálculos e snapshots do motor; hashes/índices e recomputação determinística; não aceitar números sem referência | mutação de valor, hash, janela e ledger; hash não protege contra reescrita coordenada da base |
+| Lookahead / alta | documento conhecido depois de as-of ou seleção após teste | `available_at` comprovado, limites UTC, recusa de disponibilidade desconhecida, separação de teste congelada | prefixos, janelas adjacentes e fontes com publicação posterior; data da coleta não prova data histórica de disponibilidade |
+| Reprodutibilidade / alta | modelo, prompt, dados ou dependências mudam | hash de pacote, prompt, validador e versões, captura de parâmetros e resposta; reexecutar verificações determinísticas | comparar inputs e validar replay; resposta LLM não é deterministicamente reproduzível só com seed |
+| Custo / disponibilidade / média | loop, timeout, excesso de tokens, provedor indisponível | orçamento pré-aprovado, limite de chamadas/tokens/tentativas/tempo, cancelamento e falha fechada; sem egress por padrão | respostas parciais, timeout, concorrência, cota e reboot; custo de rede cancelada pode ainda ser cobrado |
+| Confusão de autoridade / alta | texto persuasivo interpretado como plano ou autorização | saída rotulada não executável, schema fechado e política de conteúdo; nenhum consumidor de execução | instrução em texto livre, campos desconhecidos, tentativa de encaminhar conteúdo ao planner; revisão humana necessária |
+
+IDs e citações não garantem pertinência, autoria autêntica ou verdade; validação semântica de linguagem não é completa. Estado `VALIDATED` não deve ser apresentado como conselho financeiro. Qualquer capacidade nova de rede, fornecedor, autenticação, persistência ou ferramenta exige revisão específica e autorização; nenhuma é concedida neste estudo.

@@ -1,0 +1,18 @@
+# Roadmap proposto · não autorizado para implementação
+
+| Etapa | Pré-requisitos / entrada | Saída e critério de passagem | Parada |
+| --- | --- | --- | --- |
+| D1 · pacote e relatório sem LLM | ADRs revisados, esquema temporal e fonte read-only definidos | pacote e relatório determinísticos, hashes, fixtures, testes adversariais de tempo e integridade | parar se dados point-in-time ou isolamento não puderem ser demonstrados |
+| D2 · validador de claims | D1 íntegro e schema congelado | validação de IDs, janelas e números, estado explícito de evidência insuficiente; nenhuma ferramenta financeira | parar se validação confundir referência existente com verdade semântica |
+| D3 · um modelo isolado | aprovação de provedor, privacidade, orçamento e ambiente; benchmark A | experimento manual cego comparado ao baseline, sem ferramentas e com validação independente | não avançar se segurança falhar ou utilidade não compensar custo |
+| D4 · Bull/Bear/Risk | D3 avaliado; critérios e orçamento pré-registrados | experimento controlado comparado ao modelo único; preservação de divergência | rejeitar conselho se ganho não demonstrado ou segurança piorar |
+| D5 · visualização | relatórios validados, controle de dados e riscos UX revistos | leitura local não executável, estados e citações verificáveis | não expor alegações como ordens ou garantias |
+| D6 · avaliação longitudinal | baseline, datasets independentes e métricas congeladas | testes adversariais, estabilidade, qualidade e custo em janelas separadas | interromper se o custo, privacidade ou fragilidade exceder benefício |
+
+Avaliação de qualidade e custo começa já em D1–D3, não apenas no fim. Nenhuma etapa autoriza ordens reais, execução automática ou acesso privado. Decisões humanas pendentes: necessidade do produto, dados autorizados, orçamento, retenção, armazenamento, provedor, política de privacidade, hardware e critérios calibrados.
+
+## Plano de testes antes de implementar
+
+Unidade/propriedade: canonicalização, identidade, Decimal, prefixos causais, fronteiras UTC, fontes compatíveis, timestamps futuros, stale, janelas e dados insuficientes. Contratos: pacote válido e congelado, dataset ausente/adulterado, IDs incorretos, campo proibido, claim sem referência, referência inexistente, métrica inventada e contradição. Integração offline: reader read-only, ausência de rede, zero mutações em todas as tabelas financeiras, credenciais e capacidade de execução inacessíveis, falha de processo e replay preservado.
+
+Adversarial: prompt injection no texto e em saídas de agentes, chamadas de ferramenta proibida, tentativa de exfiltração/canário, instrução operacional em campo livre, dados posteriores e vazamento de treino/teste. Resiliência: schema inválido, resposta parcial, timeout, provedor indisponível, orçamento excedido, limites de chamadas/tokens/retry e cancelamento. Repetibilidade: mesmo pacote e versão geram mesma identidade de entrada; mudar modelo/prompt gera proveniência distinta, sem prometer mesma resposta. Avaliação humana cega da qualidade e estatística OOS separadas de benchmarks de custo/latência. Nenhuma suíte de LLM foi executada nesta fase.
