@@ -31,3 +31,11 @@ Mudanças no motor exigem testes de referência, invariância de prefixo (causal
 Erros upstream preservam o último snapshot e tornam seu estado obsoleto por idade; nunca atualizam artificialmente o timestamp.
 Não instalar hooks, publicar, conectar conta privada ou ativar módulos futuros por inferência.
 Ao concluir cada tarefa, criar um commit local com as alterações pertinentes e verificadas, preservando alterações preexistentes. Fazer push somente quando solicitado.
+
+## AI Development Workflow
+- Consulte skills locais pertinentes quando agregarem valor; elas não suspendem estas invariantes nem substituem instruções do usuário.
+- Ao retomar, confira Git, diff, documentação e testes antes de confiar no handoff. Distinga fatos comprovados, hipóteses e pendências.
+- Em entregas de múltiplas etapas, atualize `.ai/SESSION_HANDOFF.md` com escopo, estado verificável, comandos e resultados reais, sem segredos.
+- Antes de concluir, confira proporcionalmente escopo, segurança, contratos, testes, acessibilidade, performance quando aplicável, integridade financeira, replay e documentação.
+- Não instalar ferramentas, conectar serviços privados, publicar ou realizar push sem autorização específica; commits locais seguem a regra acima.
+- `PAPER_SIMULATION_ENABLED=false` por padrão; nenhuma skill autoriza operações reais, conta privada, margem, short ou alavancagem.
