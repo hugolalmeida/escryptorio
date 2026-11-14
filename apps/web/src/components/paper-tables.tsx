@@ -3,7 +3,7 @@ import type { Decision, Fill, Signal, Wallet } from "@/lib/paper";
 import { date, money } from "@/lib/paper";
 
 export function WalletTable({ wallets, selected, onSelect }: { wallets: Wallet[]; selected: string | null; onSelect: (id: string) => void }) {
-  return <section className="panel paper-panel"><div className="panel-heading"><div><h2>Carteiras virtuais</h2><p>Saldo e posição verificados no ledger</p></div><span className="tag">Somente leitura</span></div>
+  return <section className="panel paper-panel"><div className="panel-heading"><div><h2>Carteiras virtuais</h2><p>Dados obtidos do ledger</p></div><span className="tag">Somente leitura</span></div>
     {!wallets.length ? <p className="paper-empty">Você ainda não possui carteiras virtuais registradas.</p> : <div className="table-scroll"><table><thead><tr><th>Bot / estratégia</th><th>Mercado</th><th>Capital inicial</th><th>Saldo</th><th>Posição</th><th>Patrimônio</th><th>Estado</th><th>Detalhes</th></tr></thead><tbody>{wallets.map(w => <tr key={w.wallet_id}><td><strong>{w.spec.bot_id}</strong><br/><span className="muted">{w.spec.strategy}</span></td><td>{w.spec.symbol}<br/><span className="muted">{w.spec.interval}</span></td><td>{money(w.spec.initial_capital)}</td><td>{money(w.state.cash)}</td><td>{w.state.quantity}</td><td>{money(w.equity)}</td><td>{w.state.state === "paused" ? "Pausada" : "Ativa"}</td><td><button className="text-link" aria-pressed={selected === w.wallet_id} onClick={() => onSelect(w.wallet_id)}>Ver carteira</button></td></tr>)}</tbody></table></div>}
   </section>;
 }

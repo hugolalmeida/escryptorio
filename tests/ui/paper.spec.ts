@@ -33,6 +33,78 @@ test("paper: estados, filtros, detalhe e leitura sem mutações", async ({ page 
 test("paper: falha do backend não apresenta valores antigos", async ({ page }) => {
   await page.route("**/api/paper/**", route => route.fulfill({ status: 503, json: { detail: "indisponível" } }));
   await page.goto("/paper");
-  await expect(page.getByRole("alert").filter({ hasText: "Consulta indisponível" })).toContainText("integridade não pôde ser verificada");
+  await expect(page.getByRole("alert").filter({ hasText: "Resumo: consulta indisponível" })).toContainText("integridade não pôde ser verificada");
   await expect(page.getByText("1000 USDT")).toHaveCount(0);
+});
+
+test("paper: falha de detalhes não é apagada pelo resumo e recuperação não usa dados antigos", async ({ page }) => {
+  let fail = true;
+  await page.route("**/api/paper/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith(wallet.wallet_id) && fail) return route.fulfill({ status: 503, json: {} });
+    const data = path.endsWith("overview") ? { summary, wallets: [wallet], markets: [], collection: null, monitor_status: "UNKNOWN" }
+      : path.endsWith("signals") || path.endsWith("decisions") ? [] : path.endsWith("fills") || path.endsWith("events") ? { items: [], total: 0, offset: 0, limit: 10 }
+      : path.endsWith("equity") ? { items: [] } : { ...wallet, mark_status: "FRESH", mark_price: "150", equity: "1049", unrealized_pnl: "49" };
+    return route.fulfill({ json: envelope(data) });
+  });
+  await page.goto("/paper");
+  await page.getByRole("button", { name: "Ver carteira" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Carteira: consulta indisponível" })).toBeVisible();
+  await expect(page.getByText("Integridade da carteira selecionada: desconhecida")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Detalhe/ })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Fills virtuais" })).toHaveCount(0);
+  fail = false;
+  await page.getByRole("button", { name: "Atualizar" }).click();
+  await expect(page.getByRole("heading", { name: /Detalhe/ })).toBeVisible();
+  await expect(page.getByText("1049 USDT")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Carteira:" })).toHaveCount(0);
+});
+
+test("paper: troca rápida impede resposta anterior de substituir carteira atual", async ({ page }) => {
+  const second = { ...wallet, wallet_id: "d".repeat(32), spec: { ...wallet.spec, bot_id: "bot-segundo" } };
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let entered!: () => void;
+  const firstRequested = new Promise<void>(resolve => { entered = resolve; });
+  await page.route("**/api/paper/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith(wallet.wallet_id)) { entered(); await gate; }
+    const data = path.endsWith("overview") ? { summary, wallets: [wallet,second], markets: [], collection: null, monitor_status: "UNKNOWN" }
+      : path.endsWith("signals") || path.endsWith("decisions") ? [] : path.endsWith("fills") || path.endsWith("events") ? { items: [], total: 0, offset: 0, limit: 10 }
+      : path.endsWith("equity") ? { items: [] } : path.endsWith(second.wallet_id) ? second : wallet;
+    try { await route.fulfill({ json: envelope(data) }); } catch { /* request cancelled on selection */ }
+  });
+  await page.goto("/paper");
+  await page.getByRole("row").filter({ hasText: "bot-fixture" }).getByRole("button", { name: "Ver carteira" }).click();
+  await firstRequested;
+  await page.getByRole("row").filter({ hasText: "bot-segundo" }).getByRole("button", { name: "Ver carteira" }).click();
+  await expect(page.getByRole("heading", { name: "Detalhe · bot-segundo" })).toBeVisible();
+  release();
+  await expect(page.getByRole("heading", { name: "Detalhe · bot-fixture" })).toHaveCount(0);
+});
+
+test("paper: refresh concorrente mantém resposta mais recente", async ({ page }) => {
+  let release!: () => void;
+  let entered!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const requested = new Promise<void>(resolve => { entered = resolve; });
+  let count = 0;
+  await page.route("**/api/paper/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("overview")) {
+      count++;
+      const current = count;
+      if (current === 1) { entered(); await gate; }
+      const data = { summary: { ...summary, cash: current === 1 ? "111" : "222" }, wallets: [], markets: [], collection: null, monitor_status: "UNKNOWN" };
+      try { await route.fulfill({ json: envelope(data) }); } catch { /* cancelled stale request */ }
+      return;
+    }
+    await route.fulfill({ json: envelope([]) });
+  });
+  await page.goto("/paper");
+  await requested;
+  await page.getByRole("button", { name: "Atualizar" }).click();
+  await expect(page.getByText("222 USDT")).toBeVisible();
+  release();
+  await expect(page.getByText("111 USDT")).toHaveCount(0);
 });

@@ -6,9 +6,12 @@ from cryptolab.paper.models import FillRecord, StateRecord, WalletSpec
 from cryptolab.paper.storage import PaperStore
 from cryptolab.paper.executor import PaperExecutor
 from cryptolab.paper.executor_models import VirtualExecutionRequest
+from cryptolab.paper.marking import PaperMarker
 from cryptolab.config import Settings
 from test_paper_decisions import services, active, record
-from test_paper_planner import setup_planner
+from test_paper_planner import setup_planner, positioned_scenario
+from decimal import Decimal, localcontext
+from cryptolab.paper.ledger import LEDGER_CONTEXT
 
 
 TABLES = ("paper_wallets", "paper_events", "paper_heads", "paper_bindings", "paper_decisions",
@@ -115,3 +118,91 @@ def test_reserved_fill_without_evidence_blocks_overview(settings, store):
     with TestClient(create_app(settings)) as client:
         assert client.get('/api/v1/paper/overview').status_code == 503
     assert content(store) == before
+
+
+def test_verified_fresh_mark_and_stale_aggregation(services, monkeypatch):
+    s, service = services
+    _, signal, wallet, binding = positioned_scenario(s, strategy="trend")
+    registered = service.register_binding(binding)
+    service.activate_binding(registered["id"])
+    monkeypatch.setenv("PAPER_SIMULATION_ENABLED", "true")
+    marker = PaperMarker(s[0].path, clock=lambda: s[7][0])
+    mark = marker.mark(registered["id"], signal["id"], "fresh-test")
+    monkeypatch.setenv("PAPER_SIMULATION_ENABLED", "false")
+    other = s[1].create_wallet(WalletSpec(bot_id="second", strategy="trend", symbol="ETHUSDT", interval="60", initial_capital="500", opened_at=0), "second")
+    before = content(s[0])
+    monkeypatch.setattr("cryptolab.paper.api.time.time", lambda: s[7][0] / 1000)
+    with TestClient(create_app(Settings(database_path=s[0].path))) as client:
+        data = client.get("/api/v1/paper/overview").json()["data"]
+        w = next(x for x in data["wallets"] if x["wallet_id"] == wallet["wallet_id"])
+        with localcontext(LEDGER_CONTEXT):
+            qty, price = Decimal(w["state"]["quantity"]), Decimal(mark["price"])
+            cost, cash = Decimal(w["state"]["acquisition_cost"]), Decimal(w["state"]["cash"])
+            realized = Decimal(w["state"]["realized_pnl"])
+            value = qty * price
+            assert w["mark_status"] == "FRESH"
+            assert Decimal(w["position_value"]) == value
+            assert Decimal(w["equity"]) == cash + value
+            assert Decimal(w["unrealized_pnl"]) == value - cost
+            assert Decimal(w["total_pnl"]) == realized + value - cost
+            assert Decimal(w["average_cost"]) == cost / qty
+            assert Decimal(w["exposure"]) == value / (cash + value)
+            # The acquisition cost already incorporates entry fees.
+            assert Decimal(data["summary"]["equity"]) == sum(Decimal(x["equity"]) for x in data["wallets"])
+        s[7][0] += 91000
+        stale = client.get("/api/v1/paper/overview").json()["data"]
+        w = next(x for x in stale["wallets"] if x["wallet_id"] == wallet["wallet_id"])
+        assert w["mark_status"] == "STALE" and w["equity"] is None and w["unrealized_pnl"] is None and w["total_pnl"] is None
+        assert stale["summary"]["equity"] is None and stale["summary"]["unrealized_pnl"] is None
+        no_position = next(x for x in stale["wallets"] if x["wallet_id"] == other["wallet_id"])
+        assert Decimal(no_position["unrealized_pnl"]) == 0 and Decimal(no_position["equity"]) == 500
+    assert content(s[0]) == before
+
+
+def test_mark_before_last_fill_cannot_price_position(services, monkeypatch):
+    s, service = services
+    binding = active(s, service)
+    monkeypatch.setenv("PAPER_SIMULATION_ENABLED", "true")
+    PaperMarker(s[0].path, clock=lambda: s[7][0]).mark(binding["id"], s[4]["id"], "before-fill")
+    s[1].append(s[5]["wallet_id"], "synthetic-buy-after-mark", FillRecord(side="buy", quantity="1", price="100", fee="1", reference_price="100", candle_time=s[4]["decision_time"], event_time=s[7][0]//1000))
+    monkeypatch.setenv("PAPER_SIMULATION_ENABLED", "false")
+    monkeypatch.setattr("cryptolab.paper.api.time.time", lambda: s[7][0]/1000)
+    before = content(s[0])
+    with TestClient(create_app(Settings(database_path=s[0].path))) as client:
+        w = client.get(f"/api/v1/paper/wallets/{s[5]['wallet_id']}").json()["data"]
+        assert w["mark_status"] == "STALE"
+        assert w["equity"] is None and w["unrealized_pnl"] is None and w["total_pnl"] is None
+    assert content(s[0]) == before
+
+
+def test_tampered_mark_evidence_blocks_read(services, monkeypatch):
+    s, service = services
+    _, signal, wallet, binding = positioned_scenario(s, strategy="trend")
+    registered = service.register_binding(binding); service.activate_binding(registered["id"])
+    monkeypatch.setenv("PAPER_SIMULATION_ENABLED", "true")
+    mark = PaperMarker(s[0].path, clock=lambda: s[7][0]).mark(registered["id"], signal["id"], "tamper-dashboard")
+    with s[0].connect() as db:
+        db.execute("DROP TRIGGER paper_mark_evidence_no_update")
+        db.execute("UPDATE paper_mark_evidence SET payload='{}' WHERE id=?", (mark["id"],))
+    before = content(s[0])
+    with TestClient(create_app(Settings(database_path=s[0].path))) as client:
+        assert client.get("/api/v1/paper/overview").status_code == 503
+    assert content(s[0]) == before
+
+
+def test_fresh_mark_fee_in_cost_not_subtracted_twice(services, monkeypatch):
+    s, service = services
+    binding = active(s, service)
+    s[1].append(s[5]["wallet_id"], "synthetic-buy-fee", FillRecord(side="buy", quantity="1", price="100", fee="2", reference_price="100", candle_time=s[4]["decision_time"], event_time=s[7][0]//1000))
+    monkeypatch.setenv("PAPER_SIMULATION_ENABLED", "true")
+    mark = PaperMarker(s[0].path, clock=lambda: s[7][0]).mark(binding["id"], s[4]["id"], "fresh-with-fee")
+    monkeypatch.setenv("PAPER_SIMULATION_ENABLED", "false")
+    monkeypatch.setattr("cryptolab.paper.api.time.time", lambda: s[7][0]/1000)
+    before = content(s[0])
+    with TestClient(create_app(Settings(database_path=s[0].path))) as client:
+        w = client.get(f"/api/v1/paper/wallets/{s[5]['wallet_id']}").json()["data"]
+        assert Decimal(w["state"]["acquisition_cost"]) == Decimal("102")
+        assert Decimal(w["state"]["total_fees"]) == Decimal("2")
+        assert Decimal(w["unrealized_pnl"]) == Decimal(mark["price"]) - Decimal("102")
+        assert Decimal(w["equity"]) == Decimal("898") + Decimal(mark["price"])
+    assert content(s[0]) == before
