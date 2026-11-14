@@ -4,13 +4,14 @@ import { expect, test } from "@playwright/test";
 const envelope = (data: unknown) => ({ schema_version: 1, observed_at_ms: Date.now(), data });
 const wallet = { wallet_id: "a".repeat(32), wallet_hash: "b".repeat(64), head_hash: "c".repeat(64), sequence: 2, ledger_version: "test/1", spec: { bot_id: "bot-fixture", strategy: "trend", symbol: "BTCUSDT", interval: "60", initial_capital: "1000" }, state: { cash: "899", quantity: "1", acquisition_cost: "101", realized_pnl: "0", total_fees: "1", state: "paused" }, mark_status: "STALE", mark_price: null, mark_source_time_ms: null, average_cost: "101", position_value: null, exposure: null, equity: null, unrealized_pnl: null, total_pnl: null, last_event_time: 1, binding: null };
 const summary = { initial_capital: "1000", cash: "899", equity: null, position_value: null, realized_pnl: "0", unrealized_pnl: null, total_pnl: null, wallets: 1, positions: 1, fills: 1, decisions: 0, integrity: "WALLETS_VERIFIED" };
+const operations = {schema_version:1,observed_at_ms:1,process_liveness:"UNKNOWN",financial_integrity:"PARTIAL_VERIFIED",collection:null,markets:[],monitors:[],wallets:[],decisions:[],alerts:[],truncated:false};
 
 test("paper: estados, filtros, detalhe e leitura sem mutações", async ({ page }) => {
   const writes: string[] = [];
   page.on("request", request => { if (request.url().includes("/api/paper/") && request.method() !== "GET") writes.push(request.method()); });
   await page.route("**/api/paper/**", async route => {
     const path = new URL(route.request().url()).pathname;
-    const data = path.endsWith("overview") ? { summary, wallets: [wallet], markets: [{ symbol: "BTCUSDT", status: "STALE", source_time_ms: 1 }], collection: null, monitor_status: "UNKNOWN" }
+    const data = path.endsWith("operations/overview") ? operations : path.endsWith("overview") ? { summary, wallets: [wallet], markets: [{ symbol: "BTCUSDT", status: "STALE", source_time_ms: 1 }], collection: null, monitor_status: "UNKNOWN" }
       : path.endsWith("signals") || path.endsWith("decisions") ? [] : path.endsWith("fills") ? { items: [], total: 0, offset: 0, limit: 10 }
       : path.endsWith("events") ? { items: [], total: 0, offset: 0, limit: 10 } : path.endsWith("equity") ? { items: [] } : wallet;
     await route.fulfill({ json: envelope(data) });
@@ -42,7 +43,7 @@ test("paper: falha de detalhes não é apagada pelo resumo e recuperação não 
   await page.route("**/api/paper/**", async route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith(wallet.wallet_id) && fail) return route.fulfill({ status: 503, json: {} });
-    const data = path.endsWith("overview") ? { summary, wallets: [wallet], markets: [], collection: null, monitor_status: "UNKNOWN" }
+    const data = path.endsWith("operations/overview") ? operations : path.endsWith("overview") ? { summary, wallets: [wallet], markets: [], collection: null, monitor_status: "UNKNOWN" }
       : path.endsWith("signals") || path.endsWith("decisions") ? [] : path.endsWith("fills") || path.endsWith("events") ? { items: [], total: 0, offset: 0, limit: 10 }
       : path.endsWith("equity") ? { items: [] } : { ...wallet, mark_status: "FRESH", mark_price: "150", equity: "1049", unrealized_pnl: "49" };
     return route.fulfill({ json: envelope(data) });
@@ -69,7 +70,7 @@ test("paper: troca rápida impede resposta anterior de substituir carteira atual
   await page.route("**/api/paper/**", async route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith(wallet.wallet_id)) { entered(); await gate; }
-    const data = path.endsWith("overview") ? { summary, wallets: [wallet,second], markets: [], collection: null, monitor_status: "UNKNOWN" }
+    const data = path.endsWith("operations/overview") ? operations : path.endsWith("overview") ? { summary, wallets: [wallet,second], markets: [], collection: null, monitor_status: "UNKNOWN" }
       : path.endsWith("signals") || path.endsWith("decisions") ? [] : path.endsWith("fills") || path.endsWith("events") ? { items: [], total: 0, offset: 0, limit: 10 }
       : path.endsWith("equity") ? { items: [] } : path.endsWith(second.wallet_id) ? second : wallet;
     try { await route.fulfill({ json: envelope(data) }); } catch { /* request cancelled on selection */ }
@@ -91,6 +92,7 @@ test("paper: refresh concorrente mantém resposta mais recente", async ({ page }
   let count = 0;
   await page.route("**/api/paper/**", async route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("operations/overview")) return route.fulfill({ json: envelope(operations) });
     if (path.endsWith("overview")) {
       count++;
       const current = count;

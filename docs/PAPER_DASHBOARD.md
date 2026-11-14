@@ -18,6 +18,10 @@ Execuções com sidecar são verificadas antes de receber o rótulo `VERIFIED`; 
 
 O frontend mantém estados independentes para resumo, sinais, decisões, carteira, fills, eventos e equity. Uma falha de detalhe oculta os detalhes e o resumo financeiro dependente, informa integridade desconhecida e permite nova tentativa. Ao mudar carteira, página ou refresh, as consultas anteriores são canceladas e respostas atrasadas são descartadas. O texto “Ledgers consultados verificados” não indica verificação global.
 
+Na fase 2.3C3B, a carteira selecionada permanece identificável na tabela enquanto valores ficam indisponíveis; sinais e decisões continuam visíveis independentemente de falhas entre si. A Central de operações acrescenta observações e alertas derivados sem persistência, descritos em [PAPER_OPERATIONS.md](PAPER_OPERATIONS.md).
+
+Se a observação operacional falhar ou identificar integridade financeira degradada, o resumo financeiro é ocultado. A observação operacional e a consulta de resumo são transações distintas; seus horários são apresentados separadamente.
+
 Na verificação local com uma carteira fictícia preservada da fase anterior, dez consultas sequenciais ao overview via TestClient tiveram mediana de 73,17 ms e máximo de 623,68 ms. É uma amostra pequena e pós-mudança, sem condição antes/depois equivalente; não comprova melhoria nem desempenho com histórico crescente. O backend ainda reconstrói ledgers e pode repetir replays; investigar com medições representativas antes de otimizar, sem cache financeiro mutável.
 
 Limitações: o replay de cada carteira ainda lê a cadeia inteira no backend; a paginação limita a resposta, não o custo da verificação. Sinais e decisões exibem os últimos 20 por padrão e ainda não oferecem paginação na interface. O gráfico mostra observações discretas, não uma curva contínua. A consulta de eventos mostra até 10 na interface; a API aceita paginação. Não há consulta de conta privada, worker executor ou autorização de operação.

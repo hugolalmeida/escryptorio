@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ path: string[] }> };
 export async function GET(request: NextRequest, context: Context) {
   const path = (await context.params).path.join("/");
-  if (!/^(overview|signals|decisions|wallets\/[a-f0-9]{32}(\/(events|fills|equity))?)$/.test(path))
+  if (!/^(overview|signals|decisions|operations\/overview|wallets\/[a-f0-9]{32}(\/(events|fills|equity))?)$/.test(path))
     return NextResponse.json({ detail: "Recurso inválido." }, { status: 404 });
   const host = request.headers.get("host") ?? "";
   if (!/^(127\.0\.0\.1|localhost)(:\d{1,5})?$/.test(host)) return NextResponse.json({ detail: "Somente acesso local." }, { status: 403 });

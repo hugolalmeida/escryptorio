@@ -14,6 +14,7 @@ from cryptolab.history.storage import HistoryStore
 from cryptolab.research.api import research_router
 from cryptolab.arena.api import arena_router
 from cryptolab.paper.api import paper_router
+from cryptolab.paper.operations import operations_router
 
 
 def create_app(settings: Settings | None = None):
@@ -31,6 +32,7 @@ def create_app(settings: Settings | None = None):
     app.include_router(research_router(HistoryStore(settings.database_path), research_gate))
     app.include_router(arena_router(HistoryStore(settings.database_path), research_gate))
     app.include_router(paper_router(settings.database_path, settings.stale_after_seconds))
+    app.include_router(operations_router(settings.database_path, settings.stale_after_seconds))
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
 
     @app.middleware("http")

@@ -67,6 +67,8 @@ Na Fase 2.3C2B2B, a migration 009 acrescenta evidências de marcação e consumo
 
 Na Fase 2.3C3A, `/paper` consulta projeções GET via proxy Next restrito e FastAPI. As consultas usam SQLite em modo somente leitura, sem executar migrations no handler ou persistir expiração. A página não habilita o executor. Fórmulas, estados e limitações em [PAPER_DASHBOARD.md](PAPER_DASHBOARD.md).
 
+Na Fase 2.3C3B, a central operacional usa uma observação transacional GET com alertas derivados, sem heartbeat presumido, persistência de incidentes, rede ou operações. Contratos e limites em [PAPER_OPERATIONS.md](PAPER_OPERATIONS.md).
+
 Na Fase 2.3C2A, `monitor` lê somente snapshots já coletados, valida frescor, sequência e hash e avalia causalmente condições para posição hipotética. Sinais informativos são imutáveis e idempotentes em `monitor_signals`; o monitor não acessa o ledger paper nem cria fills. A CLI também oferece loop com lease e recuperação histórica verificada. Detalhes em [MONITOR.md](MONITOR.md).
 
 ## Motor e fórmulas

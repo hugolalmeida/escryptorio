@@ -21,6 +21,7 @@ export async function paperGet<T>(path: string, signal: AbortSignal): Promise<En
   const body = await response.json() as Envelope<T>;
   if (body.schema_version !== 1 || !body.data) throw new Error("Resposta paper inválida.");
   const data = body.data as Record<string, unknown>;
+  if (path === "operations/overview" && (!Array.isArray(data.markets) || !Array.isArray(data.monitors) || !Array.isArray(data.wallets) || !Array.isArray(data.alerts))) throw new Error("Resposta operacional inválida.");
   if (path === "overview" && (!Array.isArray(data.wallets) || !Array.isArray(data.markets) || !data.summary || typeof data.summary !== "object")) throw new Error("Resposta paper inválida.");
   if ((path === "signals" || path === "decisions") && !Array.isArray(body.data)) throw new Error("Resposta paper inválida.");
   if ((path.includes("/fills?") || path.includes("/events?") || path.endsWith("/equity")) && !Array.isArray(data.items)) throw new Error("Resposta paper inválida.");
