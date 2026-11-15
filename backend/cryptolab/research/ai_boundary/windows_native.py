@@ -90,6 +90,8 @@ class Native:
         self._function(self.kernel, "GetCurrentProcess", [], w.HANDLE)
         self._function(self.kernel, "CloseHandle", [w.HANDLE], w.BOOL)
         self._function(self.kernel, "LocalFree", [pointer], pointer)
+        self._function(self.kernel, "GetFileAttributesW", [w.LPCWSTR], w.DWORD)
+        self._function(self.kernel, "GetDriveTypeW", [w.LPCWSTR], w.UINT)
         self._function(self.kernel, "CreateJobObjectW", [pointer, w.LPCWSTR], w.HANDLE)
         self._function(self.kernel, "SetInformationJobObject", [w.HANDLE, c.c_int, pointer, w.DWORD], w.BOOL)
         self._function(self.kernel, "QueryInformationJobObject", [w.HANDLE, c.c_int, pointer, w.DWORD, pointer], w.BOOL)
@@ -123,6 +125,8 @@ class Native:
         self._function(self.advapi, "SetFileSecurityW", [w.LPCWSTR, w.DWORD, pointer], w.BOOL)
         self._function(self.advapi, "GetFileSecurityW", [w.LPCWSTR, w.DWORD, pointer, w.DWORD, c.POINTER(w.DWORD)], w.BOOL)
         self._function(self.advapi, "GetSecurityDescriptorDacl", [pointer, c.POINTER(w.BOOL), c.POINTER(pointer), c.POINTER(w.BOOL)], w.BOOL)
+        self._function(self.advapi, "GetSecurityDescriptorOwner", [pointer, c.POINTER(pointer), c.POINTER(w.BOOL)], w.BOOL)
+        self._function(self.advapi, "GetSecurityDescriptorControl", [pointer, c.POINTER(w.WORD), c.POINTER(w.DWORD)], w.BOOL)
         self._function(self.userenv, "DeriveAppContainerSidFromAppContainerName", [w.LPCWSTR, c.POINTER(pointer)], c.c_long)
         self._function(self.advapi, "FreeSid", [pointer], pointer)
 
@@ -167,14 +171,22 @@ class Native:
             if self.kernel.LocalFree(c.cast(text, c.c_void_p)):
                 raise WindowsErrorCode("ROLLBACK_INCOMPLETE")
 
-    def file_security(self, path):
+    def file_security(self, path, information=4):
         length = w.DWORD()
-        result = self.advapi.GetFileSecurityW(str(path), 4, None, 0, c.byref(length))
+        result = self.advapi.GetFileSecurityW(str(path), information, None, 0, c.byref(length))
         if result or c.get_last_error() != 122 or not 0 < length.value <= 65536:
             raise WindowsErrorCode("GetFileSecuritySize")
         buffer = c.create_string_buffer(length.value)
-        self.check(self.advapi.GetFileSecurityW(str(path), 4, buffer, len(buffer), c.byref(length)), "GetFileSecurityW")
+        self.check(self.advapi.GetFileSecurityW(str(path), information, buffer, len(buffer), c.byref(length)), "GetFileSecurityW")
         return buffer
+
+    def security_owner_control(self, descriptor):
+        owner, defaulted, control, revision = c.c_void_p(), w.BOOL(), w.WORD(), w.DWORD()
+        self.check(self.advapi.GetSecurityDescriptorOwner(descriptor, c.byref(owner), c.byref(defaulted)), "GetSecurityDescriptorOwner")
+        self.check(self.advapi.GetSecurityDescriptorControl(descriptor, c.byref(control), c.byref(revision)), "GetSecurityDescriptorControl")
+        if not owner.value or defaulted.value:
+            raise WindowsErrorCode("JOURNAL_SECURITY_NOT_VERIFIED", 0)
+        return self.sid_text(owner), control.value
 
     def dacl_bytes(self, descriptor):
         present, defaulted, acl = w.BOOL(), w.BOOL(), c.c_void_p()

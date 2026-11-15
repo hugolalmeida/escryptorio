@@ -1,3 +1,7 @@
+# Revisão de fronteiras · 2.3D3A.4-GATE
+
+**PREFLIGHT_PARTIAL.** Supervisor, guard de journal, verificadores e recibos de recursos são confiáveis; worker/bundle/JSON não podem fornecer ownership nem autorizar mutação. Guard recusa ACL ampla, owner incerto, volume não local e reparse/junction em ancestrais; confere temporários antes de publicar. SHA-256 não autentica contra escritor legítimo. Identidades de arquivo/raiz são conferidas entre etapas, sem pinning de handles durante toda a operação: corridas do mesmo usuário/SYSTEM ainda são risco residual. ACL testada em fixture não comprova negação ao token AppContainer. Journal não reconstrói ownership após crash: Create com resposta/SID/publicação perdida exige revisão manual sem Delete automático. Verificador limita ausência aos locais conhecidos e exige recursos observados; um booleano do worker não serve como recibo. Bridge e coletores nativos continuam DEFERRED; execução real NOT_AUTHORIZED e FS/rede NOT_VERIFIED. [Preflight](AI_APPCONTAINER_FINAL_PREFLIGHT.md) e [rollback](AI_APPCONTAINER_ROLLBACK_VERIFICATION.md).
+
 # Modelo de ameaças · proposta futura
 
 Ameaças pressupõem fontes, respostas de modelo e outros agentes não confiáveis. Sem runtime de IA nesta fase, controles abaixo são **requisitos propostos**, não garantias já implementadas.

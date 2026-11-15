@@ -26,6 +26,20 @@ class FakeProfiles:
         self.deleted.append(name)
         del self.entries[name]
 
+    def inspect_profile(self):
+        return {"profile_name": ProfilePolicy().name, "expected_sid": "synthetic-owned-sid",
+                "mapping_present": bool(self.entries), "folder_present": bool(self.entries)}
+
+    def verify_cleanup(self, journal, sid):
+        from cryptolab.research.ai_boundary.rollback_verification import RemovalResult, verify_removal
+        from test_authorized_runner import Fixtures
+        assert not self.entries
+        if journal is not None:
+            return verify_removal(journal, Fixtures().cleanup_observations(journal, sid), self)
+        return RemovalResult(operation_id="1"*64, policy_id=ProfilePolicy().policy_id,
+            ownership_token="2"*64, expected_sid=sid, source="TESTED_MOCK",
+            status="PROFILE_ABSENT_IN_CHECKED_LOCATIONS")
+
 
 def test_default_disabled_and_contract():
     with pytest.raises(EvidenceError, match="REQUIRES_APPROVAL"):

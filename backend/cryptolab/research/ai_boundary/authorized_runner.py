@@ -1,11 +1,11 @@
 """Reviewable runner preparation. Native execution has no enabled entry point."""
 from typing import Literal
-import os
 from pydantic import Field
 
 from .contracts import Closed, Hash
 from .profile_plan import PROFILE_NAME, ProfileLifecycle, ProfilePolicy
 from .profile_native import NativeProfileAdapter
+from .rollback_verification import verify_removal
 from ..evidence.core import EvidenceError, canonical, digest
 
 
@@ -58,16 +58,13 @@ def exercise_mock_runner(request, journal, profiles, fixtures):
     if (request.policy_id != TestPolicy().policy_id or request.operation_id != journal.record.operation_id
         or journal.record.policy_id != ProfilePolicy().policy_id):
         raise EvidenceError("RUNNER_IDENTITY_MISMATCH")
+    if journal.failed or journal.record.state != "PLANNED":
+        raise EvidenceError("JOURNAL_REQUIRES_MANUAL_REVIEW")
     manifest = canonical({"request": request.model_dump(mode="json"),
                           "policy": TestPolicy().model_dump(mode="json"),
                           "journal_ownership_token": journal.record.ownership_token})
     manifest_path = journal.root / "runner-request.json"
-    with manifest_path.open("xb") as stream:
-        stream.write(manifest)
-        stream.flush()
-        os.fsync(stream.fileno())
-    if manifest_path.read_bytes() != manifest:
-        raise EvidenceError("RUNNER_MANIFEST_READBACK_FAILED")
+    journal.write_exclusive(manifest_path, manifest)
     lifecycle = ProfileLifecycle(journal=journal)
     # The existing journal binds the profile identity. The request independently
     # binds resource/runtime policy and operation, preserving legacy journal IDs.
@@ -86,6 +83,13 @@ def exercise_mock_runner(request, journal, profiles, fixtures):
             profiles.delete(name)
             if fixtures.remove_tree_and_verify() is not True:
                 raise EvidenceError("ROLLBACK_INCOMPLETE")
+
+        @staticmethod
+        def verify_cleanup(current_journal, sid):
+            observations = fixtures.cleanup_observations(current_journal, sid)
+            if observations.source != "TESTED_MOCK":
+                raise EvidenceError("ROLLBACK_INCOMPLETE")
+            return verify_removal(current_journal, observations, profiles)
 
     def operation():
         fixtures.prepare_tree()

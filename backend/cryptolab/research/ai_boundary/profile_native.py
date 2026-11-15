@@ -2,9 +2,11 @@
 import ctypes as c
 from ctypes import wintypes as w
 from pathlib import Path
+from typing import Protocol
 
 from .profile_plan import ProfilePolicy
-from .windows_native import Native, WindowsErrorCode
+from .profile_journal import Record
+from .windows_native import Native, SID_AND_ATTRIBUTES, WindowsErrorCode
 from ..evidence.core import EvidenceError
 
 
@@ -16,7 +18,7 @@ class NativeProfileAdapter:
         self.policy = ProfilePolicy()
         n = self.native
         n._function(n.userenv, "CreateAppContainerProfile", [w.LPCWSTR, w.LPCWSTR, w.LPCWSTR,
-                    c.c_void_p, w.DWORD, c.POINTER(c.c_void_p)], c.c_long)
+                    c.POINTER(SID_AND_ATTRIBUTES), w.DWORD, c.POINTER(c.c_void_p)], c.c_long)
         n._function(n.userenv, "DeleteAppContainerProfile", [w.LPCWSTR], c.c_long)
         n._function(n.userenv, "GetAppContainerFolderPath", [w.LPCWSTR, c.POINTER(w.LPWSTR)], c.c_long)
         self.ole = c.WinDLL("ole32", use_last_error=True)
@@ -26,15 +28,27 @@ class NativeProfileAdapter:
         import winreg
         n = self.native
         sid, folder = c.c_void_p(), w.LPWSTR()
-        hr = n.userenv.DeriveAppContainerSidFromAppContainerName(self.policy.name, c.byref(sid))
-        if hr != 0:
-            raise WindowsErrorCode("DeriveProfileSid", hr & 0xffffffff)
         try:
+            hr = n.userenv.DeriveAppContainerSidFromAppContainerName(self.policy.name, c.byref(sid))
+            if hr != 0 or not sid.value:
+                raise WindowsErrorCode("DeriveProfileSid", hr & 0xffffffff)
             text = n.sid_text(sid)
             hr = n.userenv.GetAppContainerFolderPath(text, c.byref(folder))
             if (hr & 0xffffffff) not in (0, 0x80070002, 0x80070003):
                 raise WindowsErrorCode("GetAppContainerFolderPath", hr & 0xffffffff)
-            exists = bool(hr == 0 and folder.value and Path(folder.value).exists())
+            if hr == 0 and not folder.value:
+                raise WindowsErrorCode("GetAppContainerFolderPath_NULL", 0)
+            exists = False
+            if hr == 0:
+                # stat propagates access errors; exists() can hide them as absence.
+                folder_path = Path(folder.value)
+                if not folder_path.is_absolute():
+                    raise WindowsErrorCode("GetAppContainerFolderPath_INVALID", 0)
+                try:
+                    folder_path.lstat()
+                    exists = True
+                except FileNotFoundError:
+                    pass
             key = "Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppContainer\\Mappings\\" + text
             try:
                 with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key, 0, winreg.KEY_READ):
@@ -47,7 +61,7 @@ class NativeProfileAdapter:
         finally:
             if folder:
                 self.ole.CoTaskMemFree(c.cast(folder, c.c_void_p))
-            if n.advapi.FreeSid(sid):
+            if sid.value and n.advapi.FreeSid(sid):
                 raise WindowsErrorCode("ROLLBACK_INCOMPLETE")
 
     def prepare_creation(self):
@@ -65,8 +79,20 @@ class NativeProfileAdapter:
     def verify_profile(self):
         return self.inspect_profile()
 
-    def verify_removal(self):
-        return {**self.inspect_profile(), "removal_verification": "NOT_VERIFIED"}
+    def verify_removal(self, journal, resources):
+        from .rollback_verification import verify_removal
+        return verify_removal(journal, resources, self)
+
+
+class ProfileOperationPort(Protocol):
+    """Future supervisor port; deliberately no implementation using native DLLs.
+
+    Ownership combines a live S_OK Create receipt with the durable operation;
+    neither name, derived SID nor a recovery journal can reconstruct that receipt.
+    The next reviewed bridge must also collect handle/Job/storage observations.
+    """
+    def create_owned(self, operation: Record) -> str: ...
+    def delete_owned(self, operation: Record) -> None: ...
 
 
 class PreparedNativeMutationContract:
@@ -77,9 +103,13 @@ class PreparedNativeMutationContract:
     """
     synthetic_only = True
 
-    def __init__(self, api, expected_sid):
+    def __init__(self, api, expected_sid: str):
         if getattr(api, "synthetic_only", False) is not True:
             raise EvidenceError("PROFILE_CREATION_REQUIRES_APPROVAL")
+        # Reuse the strict SID grammar; no optional/implicit expected identity.
+        Record(operation_id="0" * 64, policy_id=ProfilePolicy().policy_id,
+               ownership_token="0" * 64, expected_sid=expected_sid,
+               created_at_ms=0, last_transition_ms=0)
         self.api = api
         self.expected_sid = expected_sid
         self.owned_sid = None
@@ -114,8 +144,11 @@ class PreparedNativeMutationContract:
     def stop_and_release(self):
         self.api.stop_and_release()
 
+    def inspect_profile(self):
+        return self.api.inspect_profile()
+
     def delete(self, name):
-        if self.owned_sid is None or self.lookup(name) != self.owned_sid:
+        if name != ProfilePolicy().name or self.owned_sid is None or self.lookup(name) != self.owned_sid:
             raise EvidenceError("ROLLBACK_REQUIRES_MANUAL_REVIEW")
         hr = self.api.DeleteAppContainerProfile(name)
         if hr != 0:

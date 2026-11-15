@@ -385,3 +385,32 @@ Replay verification used `.venv/Scripts/python -` with mode=ro/query_only origin
 
 
 Final targeted command `.venv/Scripts/python -m pytest backend/tests/test_authorized_runner.py backend/tests/test_profile_plan.py backend/tests/test_profile_journal.py backend/tests/test_windows_isolation.py backend/tests/test_ai_boundary.py -q` completed with147 passed, one preexisting warning,58.82s,exit0. A final explicit tree-absence confirmation guard and regression case followed; `test_authorized_runner.py -q` then passed20 tests in1.51s,exit0. A callback returning False cannot publish CLEANED. These final changes were verified by the targeted commands; the earlier full-suite count remains499/1skip.
+# Verification 2.3D3A.4-GATE · 15/11/2026
+
+Baseline: `main`, `ffeaf0674a67d3114cffe9b85cc177a27259564c`, clean; `git status -sb`, `git rev-parse HEAD`, `git log -5 --oneline` and diff against the mandatory baseline executed, exit 0. Current gate **PREFLIGHT_PARTIAL / NOT_AUTHORIZED**. [Final preflight and 22-item report](AI_APPCONTAINER_FINAL_PREFLIGHT.md), [rollback verification](AI_APPCONTAINER_ROLLBACK_VERIFICATION.md).
+
+Final targeted command (exit 0):
+
+```text
+.venv/Scripts/python -m pytest backend/tests/test_appcontainer_preflight.py backend/tests/test_authorized_runner.py backend/tests/test_profile_plan.py backend/tests/test_profile_journal.py backend/tests/test_windows_isolation.py backend/tests/test_ai_boundary.py -q
+217 passed, 1 warning in 75.75s
+```
+
+Earlier executed checks: profile/runner/journal 47 passed in 4.17s, exit 0; initial new preflight 52 passed/1 failed in 6.04s, exit 1 (retry was correctly refused with FileExistsError but the test expected only EvidenceError); corrected expanded subset 112 passed in 9.58s, exit 0; targeted 213 passed in 67.82s and then 216 passed in 66.53s, exit 0. Full suite before the final four regression cases: 567 passed/1 skipped/1 warning in 152.69s, exit 0. The final full-suite result is recorded after completion below. Warning is the preexisting Starlette/httpx deprecation; no installation performed.
+
+Native read-only diagnostic through `.venv/Scripts/python -`, exit 0: token_type=1, elevated=False, elevation_type=3, appcontainer=False, pointer_bytes=8, five privileges present/one enabled. Discovery creates/releases an ephemeral restricted token, without profile creation or account changes. Exact reserved profile inspection: folder_present=False, mapping_present=False, ABSENT_IN_INSPECTED_LOCATIONS. Measured policy hash remains `489b6c6abe0719cd8cc78a8cf18fbe1159235ed5be69dc72312f5359fc62258b`, matching the approval manifest. No real Create/DeleteAppContainerProfile API called. Actual Win32 DACL read-back on disposable root/children/temp/manifest, permissive ACL rejection and junction rejection passed. Worker AppContainer access-denial tests NOT_EXECUTED. Mock receipts and injected API responses are TESTED_MOCK, not OS enforcement.
+
+Replay command `.venv/Scripts/python -` used `sqlite3.connect(source_uri + '?mode=ro', uri=True)`, PRAGMA query_only=ON, SQLite backup into TemporaryDirectory, HistoryStore/ResearchService only on the copy, no migrations, all connections closed and temporary backup removed. Final exit 0 with output:
+
+```text
+fingerprint=e3adfd0e20b3cdcad31a596ae3287aabeebcb65abc458f7541f23f063ecc3f62
+replays=38 total=38 legacy=14
+REPLAY_CLEANUP_COMPLETE
+```
+
+The first replay script exited 1 before replay because store.connect() is a context manager and was incorrectly wrapped in closing(); the corrected `with store.connect()` run above completed. Origin was read-only in both attempts; failed attempt did not run migrations or financial mutations.
+
+No financial engine, strategy, ledger, wallet, migration, frontend, dependency or route changed. LIVE_TRADING_ENABLED=false and PAPER_SIMULATION_ENABLED=false defaults preserved. No LLM, private API, credentials, firewall/registry writes, account/service/global Windows changes. Only own disposable ACLs, benign Job/process controls and ephemeral listener used in tests. No real profile/operational journal created/deleted. Pytest may retain recent synthetic fixtures in TEMP; no blanket TEMP cleanup was attempted. The proposed persistent journal root and workspace `%SystemDrive%` artifact both absent on explicit checks. New reports validated as UTF-8 without replacement characters. Frontend build/typecheck/Playwright not repeated for this backend/documentation-only diff. Final staged whitespace/scope checks and commit recorded in Git; no push/PR.
+# Final full-suite result · 2.3D3A.4-GATE
+
+`.venv/Scripts/python -m pytest backend/tests -q -rs`: **571 passed, 1 skipped, 1 warning in 160.25s**, exit 0, after all code changes. Skip: `backend/tests/test_evidence_h1.py:133`, Windows does not permit symlink creation in this environment. Warning: preexisting Starlette/httpx deprecation. Final targeted result: **217 passed**, exit 0. No code changes followed these final runs; remaining edits were documentation only.

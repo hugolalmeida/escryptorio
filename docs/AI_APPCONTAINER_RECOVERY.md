@@ -1,3 +1,7 @@
+# Revisão 2.3D3A.4-GATE — recuperação conservadora
+
+**PREFLIGHT_PARTIAL.** A [matriz de crash e verificação](AI_APPCONTAINER_ROLLBACK_VERIFICATION.md) é a referência atual. Qualquer falha de fsync/replace/read-back após Create impede Delete e reutilização: o estado em memória vai para revisão manual, sem tentar sobrescrever o registro falho. Retorno perdido, SID divergente, CREATING com perfil presente ou ausente e Delete sem confirmação exigem revisão humana e reinspeção externa. Não há exclusão automática, retry de API, limpeza por prefixo nem reabertura para escrita. Uma publicação pode existir no disco sem confirmação pelo supervisor; isso não autoriza continuar. Journal v1/hash foram preservados; CLEANED antigo continua exigindo reinspeção de storage e não prova o novo gate. Troca do arquivo, corrupção, geração antiga ou inesperada bloqueiam definitivamente o writer. O local persistente de journal continua não criado.
+
 # Journal e recuperação · 2.3D3A.3
 
 Record v1 é fechado e imutável. Registra operação, nome exato, política, correlação ownership_token, SID esperado/observado, horários UTC em ms, geração, estado, manifesto de recursos e verificação. ownership_token é correlação local da operação, sem credencial de provedor. Os testes usam apenas IDs fictícios e diretórios temporários. O fluxo real precisará gerar IDs imprevisíveis e guardar o journal em diretório protegido escolhido pelo supervisor.

@@ -1,3 +1,7 @@
+# Revisão 2.3D3A.4-GATE — PREFLIGHT_PARTIAL
+
+Este plano continua **PREPARED_NOT_EXECUTED / NOT_AUTHORIZED**. Antes de qualquer implementação conectada, revisar [preflight final](AI_APPCONTAINER_FINAL_PREFLIGHT.md). A ponte operacional permanece ausente; exige implementação/revisão separada e autorização específica, nunca flag ou manifesto. A futura conexão deve exigir `validate_journal_preflight` para raiz, diretório da operação, journal e runner-request, todos com owner/DACL conferidos. Exige também recibos independentes de processo/Job/handles/diretórios, inspeção read-only exata após Delete e resultado correspondente antes de CLEANED. Esses coletores nativos ainda estão DEFERRED. Falha após Create e antes da confirmação durável conserva o recurso para revisão manual. Nenhum ensaio real nesta fase; testes ACL isolados não comprovam negação ao worker. [Matriz de rollback](AI_APPCONTAINER_ROLLBACK_VERIFICATION.md).
+
 # Plano específico do Stage G · NOT_AUTHORIZED
 
 Perfil único proposto Escryptorio.PoC.D3A2.20261115.8c514dea. Capabilities vazias. Inspeção atual read-only encontrou pasta e mapeamento ausentes nas localizações consultadas. Essa inspeção deverá ser repetida imediatamente antes de eventual criação. Perfil preexistente não será reutilizado, modificado ou excluído.

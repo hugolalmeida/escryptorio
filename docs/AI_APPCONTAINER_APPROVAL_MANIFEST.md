@@ -1,3 +1,7 @@
+# Revisão 2.3D3A.4-GATE — PREFLIGHT_PARTIAL
+
+**NOT_AUTHORIZED.** Perfil, política e operação propostos abaixo permanecem apenas identificadores da proposta. [Preflight final](AI_APPCONTAINER_FINAL_PREFLIGHT.md) e [rollback](AI_APPCONTAINER_ROLLBACK_VERIFICATION.md) registram os limites atuais. A próxima decisão é revisar o commit e definir a preparação faltante do bridge e dos coletores nativos. Nenhum campo deste manifesto, ambiente ou status de mock autoriza conexão/execução. O local persistente de journal não foi criado. Antes de eventual Create, será obrigatório verificar sua DACL/owner/caminho com o guard, conferir novamente perfil ausente e registrar intenção durável; autorização humana futura exige nova tarefa, perfil/política exatos e rollback revisado. A ausência observada nesta fase é limitada ao storage e mapeamento exatos, sem recibo de ownership.
+
 # Manifesto para revisão humana · NOT_AUTHORIZED
 
 Este documento descreve uma operação proposta. Ele não concede autorização nem funciona como credencial de execução.

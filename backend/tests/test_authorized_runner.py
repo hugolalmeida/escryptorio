@@ -40,6 +40,15 @@ class Fixtures:
         self.step("remove")
         return True
 
+    def cleanup_observations(self, journal, sid):
+        from cryptolab.research.ai_boundary.rollback_verification import ResourceObservations
+        assert journal.record.state == "CLEANING"
+        return ResourceObservations(operation_id=journal.record.operation_id,
+            policy_id=journal.record.policy_id, ownership_token=journal.record.ownership_token,
+            expected_sid=sid, source="TESTED_MOCK", ownership_confirmed=True,
+            delete_succeeded=True, process_stopped=True, job_empty=True,
+            handles_released=True, operation_directories_absent=True, tree_absent=True)
+
 
 def request():
     return TestRequest(operation_id="1"*64, policy_id=TestPolicy().policy_id)
@@ -105,7 +114,7 @@ def test_manifest_fsync_failure_prevents_creation(tmp_path, monkeypatch):
         patch.setattr(os, "fsync", fail)
         with pytest.raises(OSError): exercise_mock_runner(request(), journal, profiles, Fixtures())
     assert not profiles.entries and journal.record.state == "PLANNED"
-    with pytest.raises(FileExistsError): exercise_mock_runner(request(), journal, profiles, Fixtures())
+    with pytest.raises(EvidenceError): exercise_mock_runner(request(), journal, profiles, Fixtures())
 
 
 def test_unconfirmed_tree_absence_is_not_cleaned(tmp_path):
@@ -140,6 +149,10 @@ class FakeUserenv:
         return self.delete_hr
     def verify_storage_absent(self, name): return not self.present
     def stop_and_release(self): pass
+    def inspect_profile(self):
+        from cryptolab.research.ai_boundary.profile_plan import ProfilePolicy
+        return {"profile_name": ProfilePolicy().name, "expected_sid": "synthetic-owned-sid",
+                "mapping_present": self.present, "folder_present": self.present}
 
 
 def test_exact_native_call_bodies_with_fake_userenv(tmp_path):

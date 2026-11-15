@@ -1,3 +1,7 @@
+# Revisão 2.3D3A.4-GATE — PREFLIGHT_PARTIAL
+
+O status de preparação abaixo é histórico. `execute_authorized_test` continua sempre bloqueado. `ProfileOperationPort` explicita a interface futura sem implementar a ponte nativa; Create/Delete do contrato continuam exclusivos de FakeUserenv. O runner agora usa escrita exclusiva do manifesto pelo journal, protegida quando existe guard e com sessão permanentemente bloqueada após falha. Recusa estado diferente de PLANNED antes de escrever qualquer manifesto. Após parar/excluir/remover a tree sintética, exige `ResourceObservations` do fixture e verificação independente, além da correlação do resultado com operação/política/token/SID para CLEANED. Residual de Job ou observação ausente não pode ser superado pelo sucesso funcional. O mock sem guard permanece TESTED_MOCK; é insuficiente para preflight nativo. [Preflight final](AI_APPCONTAINER_FINAL_PREFLIGHT.md) detalha o código operacional ainda necessário e as verificações não realizadas.
+
 # Authorized test runner · 2.3D3A.4
 
 Estado PREPARATION_COMPLETE_AWAITING_APPROVAL. Baseline main limpa em 1fd80d2be38282c9718fdefcfc5ee78b74db48ad. Skills locais de continuidade e segurança aplicadas. Supervisor, política, lifecycle, journal e verificadores são confiáveis. Bundle e saída de worker são dados sem autorização operacional.

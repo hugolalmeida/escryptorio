@@ -45,6 +45,7 @@ class ProfileLifecycle:
         self.owned_sid = None
         self.journal = journal
         self._state = "PLANNED"
+        self.cleanup_result = None
         if journal is not None and (journal.record.state != "PLANNED" or journal.record.policy_id != self.policy.policy_id):
             raise EvidenceError("JOURNAL_IDENTITY_INVALID")
 
@@ -55,7 +56,12 @@ class ProfileLifecycle:
     @state.setter
     def state(self, value):
         if self.journal is not None:
-            self.journal.transition(value, observed_sid=self.owned_sid)
+            try:
+                self.journal.transition(value, observed_sid=self.owned_sid, cleanup_result=self.cleanup_result)
+            except BaseException:
+                if self.journal.failed:
+                    self._state = "ROLLBACK_REQUIRES_MANUAL_REVIEW"
+                raise
         self._state = value
 
     def create(self):
@@ -81,7 +87,11 @@ class ProfileLifecycle:
             self.state = "TESTING"
             return operation()
         finally:
-            if self.owned_sid and self.state != "ROLLBACK_REQUIRES_MANUAL_REVIEW":
+            if self.journal is not None and self.journal.failed:
+                # Durable state may differ from memory. Preserve the original
+                # error and resource; neither retry nor delete after write failure.
+                self._state = "ROLLBACK_REQUIRES_MANUAL_REVIEW"
+            elif self.owned_sid and self.state not in ("CREATING", "ROLLBACK_REQUIRES_MANUAL_REVIEW"):
                 self.state = "CLEANING"
                 try:
                     api.stop_and_release()
@@ -91,9 +101,15 @@ class ProfileLifecycle:
                     api.delete(self.policy.name)
                     if api.lookup(self.policy.name) is not None:
                         raise EvidenceError("ROLLBACK_INCOMPLETE")
+                    self.cleanup_result = api.verify_cleanup(self.journal, self.owned_sid)
+                    if "OWNERSHIP_OR_JOURNAL_CONFLICT" in self.cleanup_result.details:
+                        self.state = "ROLLBACK_REQUIRES_MANUAL_REVIEW"
+                        raise EvidenceError(self.state)
+                    if self.cleanup_result.status != "PROFILE_ABSENT_IN_CHECKED_LOCATIONS":
+                        raise EvidenceError("ROLLBACK_INCOMPLETE")
                     self.state = "CLEANED"
                 except BaseException:
-                    if self.state != "ROLLBACK_REQUIRES_MANUAL_REVIEW":
+                    if self.state != "ROLLBACK_REQUIRES_MANUAL_REVIEW" and not (self.journal and self.journal.failed):
                         self.state = "ROLLBACK_INCOMPLETE"
                     raise
             elif self.state == "CREATING":

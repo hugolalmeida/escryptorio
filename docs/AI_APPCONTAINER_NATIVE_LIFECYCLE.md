@@ -1,3 +1,7 @@
+# Revisão 2.3D3A.4-GATE — PREFLIGHT_PARTIAL
+
+As entradas de mutação continuam bloqueadas e o port nativo não foi implementado/conectado. A inspeção testa NULL na derivação e no getter, libera SID também em erro parcial e usa lstat para não ocultar erro de acesso ao storage como ausência. `verify_removal(journal, resources)` agora delega ao verificador independente read-only; a documentação antiga abaixo descreve o estado anterior. Recibos operacionais nativos continuam DEFERRED, Create/Delete reais NOT_AUTHORIZED e FS/rede NOT_VERIFIED. [Preflight](AI_APPCONTAINER_FINAL_PREFLIGHT.md) e [rollback](AI_APPCONTAINER_ROLLBACK_VERIFICATION.md).
+
 # Native lifecycle · 2.3D3A.3
 
 Estado PREPARATION_COMPLETE_AWAITING_APPROVAL. Baseline d50f93291477581a37b9cd2be3c1dfe1a1fc696e, main limpa. Componentes confiáveis são o supervisor, o runtime fixo e os verificadores. Bundle/contexto/saída do worker não concedem autorização. Skills de continuidade e segurança aplicadas.

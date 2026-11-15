@@ -1,3 +1,7 @@
+# Gate atual · 2.3D3A.4-GATE
+
+**PREFLIGHT_PARTIAL**, sem início de D3B. [Preflight final](AI_APPCONTAINER_FINAL_PREFLIGHT.md) registra preparação e pendências. Próxima decisão humana: revisar o commit e definir tarefa para completar/revisar o port operacional e os coletores de recibos, ainda desconectados. Conectar o bridge ou executar ensaio real exige commit revisado, aprovação específica com perfil/política/rollback e outra tarefa. Nenhum manifesto, variável ou mock concede essa autorização. Runtime restrito, FS/rede, CPU/disco e rollback real continuam não comprovados. Nenhuma LLM ou integração financeira adicionada.
+
 # Roadmap proposto · não autorizado para implementação
 
 | Etapa | Pré-requisitos / entrada | Saída e critério de passagem | Parada |
