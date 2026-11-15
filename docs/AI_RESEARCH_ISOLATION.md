@@ -50,3 +50,9 @@ Os testes de gateway recusam respostas adulteradas mesmo com output_hash recalcu
 Riscos residuais incluem acesso do subprocesso às permissões do usuário, ausência de limite de memória/CPU/disco, ausência de kill-on-supervisor-exit, corridas em arquivos controlados pelo mesmo usuário, autenticidade externa desconhecida, incompatibilidade com v1 no novo builder e ausência de validação de linguagem livre. A inspeção de APIs e testes de mock não autorizam execução de código hostil.
 
 O futuro gate exige launcher com fronteiras de SO comprovadas para arquivos, credenciais, rede/loopback, memória e árvore de processos. Também exige política de privacidade, retenção, fornecedor, orçamento e aceitação humana dos riscos residuais. Essas decisões estão pendentes. A fase 2.3D3B continua fora desta entrega.
+
+# Prova Windows · 2.3D3A.1
+
+A PoC experimental implementa processo suspenso, Job configurado e conferido antes do resume, limites de commit/processos, término da árvore e rollback. O teste de morte do supervisor comprova KILL_ON_JOB_CLOSE nas fixtures benignas. O resultado é PARTIAL_POC. Restricted Token criou processo, mas o runtime falhou na inicialização; AppContainer sem perfil falhou na criação. Negação de filesystem e rede permanece NOT_VERIFIED. ISOLATED_RESEARCH conserva falha fechada, e JOB_ONLY é seleção explícita exclusiva dos experimentos de recursos.
+
+Capacidades observadas em [WINDOWS_ISOLATION_CAPABILITIES.md](WINDOWS_ISOLATION_CAPABILITIES.md). Launcher, política e rollback em [AI_WINDOWS_ISOLATION_POC.md](AI_WINDOWS_ISOLATION_POC.md). Evidências, limitações e próxima etapa em [AI_ISOLATION_TEST_RESULTS.md](AI_ISOLATION_TEST_RESULTS.md).

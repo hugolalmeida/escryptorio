@@ -305,3 +305,38 @@ O teste sintético compara todos os objetos e linhas representados por iterdump 
 ## Escopo e verificações restantes
 
 Arquivos financeiros, motor, estratégias, simulador, migrations, rotas, frontend, dependências e dados históricos têm zero alterações neste diff. As flags existentes continuam sob os contratos anteriores, exercitados pela suíte. Playwright, build e typecheck foram dispensados nesta entrega restrita a backend/documentação. A verificação de performance é limitada ao tempo observado das execuções, sem benchmark de limite máximo. Negação de execução financeira pelo SO e resistência de uma LLM a prompt injection permanecem NOT_VERIFIED. O mock e seu gateway não oferecem caminho de ação financeira. O isolamento forte e a fase D3B ficam DEFERRED.
+
+# Verificação 2.3D3A.1 · PoC Windows · 15/11/2026
+
+Baseline Git conferido na main em `775e9c553d6ba346f23fceb1348345fc7eb30035`, árvore limpa. Os números 427/143 da 2.3D3A foram tratados como histórico documental. A PoC acrescenta somente três módulos experimentais, testes e documentação, com modos de produção preservados.
+
+| Comando ou ensaio | Resultado atual |
+| --- | --- |
+| `.venv/Scripts/python -m pytest backend/tests -q` após implementação inicial | 454 passed, 1 skipped, 1 warning, 150,25 s, saída 0 |
+| Execução direcionada com sete arquivos abaixo, após ambiente e CLI corrigidos | 171 passed, 1 skipped, 1 warning, 75,02 s, saída 0 |
+| `.venv/Scripts/python -m pytest backend/tests -q` repetido após revisão | 455 passed, 1 skipped, 1 warning, 148,32 s, saída 0 |
+| Testes Windows finais após bloqueio de reuso e propagação de rollback incompleto | Resultado final registrado em AI_ISOLATION_TEST_RESULTS.md |
+| CLI `.venv/Scripts/python -m cryptolab.research.ai_boundary.isolation_poc --suite` | PARTIAL_POC, cleanup COMPLETE, canários intactos, saída 0 |
+| Repetição final do agregador via stdin | MEMORY_LIMIT/PROCESS_LIMIT/ROLLBACK ENFORCED_AND_TESTED, FS/rede NOT_VERIFIED, saída 0 |
+| Replay em backup SQLite temporário | 38/38 IDs preservados, 14 legados, limpeza COMPLETE, saída 0, 5,17 s |
+| Sintaxe e links | Quatro fontes/teste compilados por compile(), dois links locais dos três documentos novos conferidos |
+
+```powershell
+.venv/Scripts/python -m pytest backend/tests/test_windows_isolation.py backend/tests/test_ai_boundary.py backend/tests/test_evidence.py backend/tests/test_evidence_backtest.py backend/tests/test_evidence_claims.py backend/tests/test_evidence_hardening.py backend/tests/test_evidence_h1.py -q -rs
+```
+
+A suíte completa repetida foi iniciada antes do reforço final que invalida uma instância após rollback nativo incompleto. Esse reforço e sua propagação após remover a árvore foram verificados em execução posterior do arquivo Windows. O skip continua sendo test_evidence_h1.py, linha 133, porque o Windows recusa criação de symlink. O aviso Starlette/httpx é preexistente.
+
+O token consultado é primário, UAC limitado e não elevado. A venv e o Git foram executados pela identidade proprietária, fora da restrição da ferramenta, enquanto a PoC recusa TokenIsElevated=True. A configuração de Job foi aplicada e relida antes do lançamento suspenso. VirtualAlloc de 96 MiB foi negado com erro 1455 sob limite de processo de 64 MiB e aceito sob limite de 192 MiB. O Job agregado foi testado separadamente. A tentativa de descendente recebeu erro 1816 no limite de um. O teste positivo permitiu dois processos e verificou sua saída após término do Job. A morte do helper supervisor fechou o último handle não herdado do Job e ambos os handles de processo sinalizaram término.
+
+Restricted Token com SID Restricted Code criou processo, mas o runtime retornou 0xC0000022 antes do probe. AppContainer sem perfil retornou erro 203 em CreateProcessW, sem fallback. As tentativas de arquivos e rede ficam NOT_VERIFIED. Canários sintéticos e a base fictícia permaneceram intactos. O listener de loopback é local e efêmero, com controles positivos do supervisor e JOB_ONLY. Egress externo, DNS, IPC, CPU e disco não foram comprovados, com CPU/disco DEFERRED.
+
+A revisão encontrou cache incidental em diretório relativo `%SystemDrive%` no workspace. Os metadados foram conferidos, SystemDrive foi incluído no ambiente mínimo e cwd do helper foi fixado na árvore sintética. O artefato próprio foi removido por caminho literal com checagem de contenção. As verificações finais conferem sua ausência. Nenhum arquivo de cache ou banco sintético entra no commit.
+
+Fingerprint financeiro recalculado e preservado em `e3adfd0e20b3cdcad31a596ae3287aabeebcb65abc458f7541f23f063ecc3f62`. A origem do replay foi aberta em mode=ro/query_only e a execução ocorreu na cópia temporária, com todas as conexões fechadas antes da remoção. A comparação integral de não mutação foi exercitada em banco sintético, com várias tabelas financeiras vazias, e nos bytes do bundle.
+
+A revisão do diff confirma escopo em ai_boundary, testes e documentação. Zero alterações de engine, estratégias, migrations, ledger, rotas, dependências ou frontend. Playwright, build e typecheck ficaram dispensados pelo escopo backend/documentação. Zero regras de firewall, perfis AppContainer, contas, serviços ou ACLs externas foram criados pela implementação. DACLs foram aplicadas exclusivamente à raiz temporária da instância e seus descendentes.
+
+Readiness PARTIAL_POC. ISOLATED_RESEARCH permanece indisponível. A próxima etapa mínima proposta é revisar autorização e rollback de perfil AppContainer descartável e compatibilidade do runtime para testar negação real de arquivos e loopback. Capacidades, hipóteses, tentativas falhas, rollback e relatório de 30 itens em [AI_ISOLATION_TEST_RESULTS.md](AI_ISOLATION_TEST_RESULTS.md), [AI_WINDOWS_ISOLATION_POC.md](AI_WINDOWS_ISOLATION_POC.md) e [WINDOWS_ISOLATION_CAPABILITIES.md](WINDOWS_ISOLATION_CAPABILITIES.md).
+
+A última execução `.venv/Scripts/python -m pytest backend/tests/test_windows_isolation.py -q`, posterior ao bloqueio persistente de reuso após rollback incompleto, terminou com 28 passed, um aviso Starlette/httpx, em 11,79 s e saída 0. A suíte completa repetida teve 455 passed/1 skipped em 148,32 s. A execução direcionada teve 171 passed/1 skipped em 75,02 s. O skip é a criação de symlink recusada pelo Windows. O teste final confirma propagação de ROLLBACK_INCOMPLETE mesmo após remover a árvore sintética.

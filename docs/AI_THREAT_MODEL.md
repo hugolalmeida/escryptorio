@@ -20,3 +20,9 @@ IDs e citações não garantem pertinência, autoria autêntica ou verdade; vali
 O subconjunto determinístico está IMPLEMENTED e TESTED em `cryptolab.research.ai_boundary`. O builder aceita bundles v2 verificados e aplica allowlist. O mock stdlib executa em subprocesso supervisionado com gateway independente e orçamento simulado. DEVELOPMENT_MOCK devolve NOT_SANDBOXED. ISOLATED_RESEARCH retorna ISOLATED_RESEARCH_UNAVAILABLE. O gate para D3B é NOT_READY por ausência de fronteiras de SO comprovadas para arquivos, credenciais, rede e recursos.
 
 Contratos, minimização e causalidade em [AI_RESEARCH_CONTEXT.md](AI_RESEARCH_CONTEXT.md). Ambiente Windows, matriz de alternativas e riscos em [AI_RESEARCH_ISOLATION.md](AI_RESEARCH_ISOLATION.md). Limites e contabilidade em [AI_RESEARCH_BUDGET.md](AI_RESEARCH_BUDGET.md). Resultados realmente executados em [VERIFICATION.md](VERIFICATION.md). A investigação e implementação de isolamento forte ficam DEFERRED.
+
+# Prova Windows · 2.3D3A.1
+
+A PoC experimental implementa processo suspenso, Job configurado e conferido antes do resume, limites de commit/processos, término da árvore e rollback. O teste de morte do supervisor comprova KILL_ON_JOB_CLOSE nas fixtures benignas. O resultado é PARTIAL_POC. Restricted Token criou processo, mas o runtime falhou na inicialização; AppContainer sem perfil falhou na criação. Negação de filesystem e rede permanece NOT_VERIFIED. ISOLATED_RESEARCH conserva falha fechada, e JOB_ONLY é seleção explícita exclusiva dos experimentos de recursos.
+
+Capacidades observadas em [WINDOWS_ISOLATION_CAPABILITIES.md](WINDOWS_ISOLATION_CAPABILITIES.md). Launcher, política e rollback em [AI_WINDOWS_ISOLATION_POC.md](AI_WINDOWS_ISOLATION_POC.md). Evidências, limitações e próxima etapa em [AI_ISOLATION_TEST_RESULTS.md](AI_ISOLATION_TEST_RESULTS.md).
