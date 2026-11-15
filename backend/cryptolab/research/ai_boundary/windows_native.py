@@ -121,6 +121,8 @@ class Native:
         self._function(self.advapi, "ConvertStringSecurityDescriptorToSecurityDescriptorW",
                        [w.LPCWSTR, w.DWORD, c.POINTER(pointer), pointer], w.BOOL)
         self._function(self.advapi, "SetFileSecurityW", [w.LPCWSTR, w.DWORD, pointer], w.BOOL)
+        self._function(self.advapi, "GetFileSecurityW", [w.LPCWSTR, w.DWORD, pointer, w.DWORD, c.POINTER(w.DWORD)], w.BOOL)
+        self._function(self.advapi, "GetSecurityDescriptorDacl", [pointer, c.POINTER(w.BOOL), c.POINTER(pointer), c.POINTER(w.BOOL)], w.BOOL)
         self._function(self.userenv, "DeriveAppContainerSidFromAppContainerName", [w.LPCWSTR, c.POINTER(pointer)], c.c_long)
         self._function(self.advapi, "FreeSid", [pointer], pointer)
 
@@ -165,12 +167,48 @@ class Native:
             if self.kernel.LocalFree(c.cast(text, c.c_void_p)):
                 raise WindowsErrorCode("ROLLBACK_INCOMPLETE")
 
+    def file_security(self, path):
+        length = w.DWORD()
+        result = self.advapi.GetFileSecurityW(str(path), 4, None, 0, c.byref(length))
+        if result or c.get_last_error() != 122 or not 0 < length.value <= 65536:
+            raise WindowsErrorCode("GetFileSecuritySize")
+        buffer = c.create_string_buffer(length.value)
+        self.check(self.advapi.GetFileSecurityW(str(path), 4, buffer, len(buffer), c.byref(length)), "GetFileSecurityW")
+        return buffer
+
+    def dacl_bytes(self, descriptor):
+        present, defaulted, acl = w.BOOL(), w.BOOL(), c.c_void_p()
+        self.check(self.advapi.GetSecurityDescriptorDacl(descriptor, c.byref(present), c.byref(acl), c.byref(defaulted)), "GetSecurityDescriptorDacl")
+        if not present.value or not acl.value:
+            raise WindowsErrorCode("DACL_MISSING", 0)
+        size = c.c_ushort.from_address(acl.value + 2).value
+        if size < 8:
+            raise WindowsErrorCode("DACL_INVALID", 0)
+        raw = c.string_at(acl, size)
+        count = int.from_bytes(raw[4:6], "little")
+        entries, offset = [], 8
+        for _ in range(count):
+            length = int.from_bytes(raw[offset+2:offset+4], "little")
+            if length < 8 or offset + length > size:
+                raise WindowsErrorCode("DACL_INVALID", 0)
+            mask = int.from_bytes(raw[offset+4:offset+8], "little")
+            mapped = mask & 0x0fffffff
+            for bit, rights in ((0x80000000, 0x120089), (0x40000000, 0x120116),
+                                (0x20000000, 0x1200a0), (0x10000000, 0x1f01ff)):
+                if mask & bit:
+                    mapped |= rights
+            entries.append((raw[offset:offset+2], mapped, raw[offset+8:offset+length]))
+            offset += length
+        return entries
+
     def apply_dacl(self, path, sddl):
         descriptor = c.c_void_p()
         self.check(self.advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW(
             sddl, 1, c.byref(descriptor), None), "ConvertSecurityDescriptor")
         try:
             self.check(self.advapi.SetFileSecurityW(str(path), 0x80000004, descriptor), "SetFileSecurityW")
+            if self.dacl_bytes(descriptor) != self.dacl_bytes(self.file_security(path)):
+                raise WindowsErrorCode("DACL_READBACK_MISMATCH", 0)
         finally:
             if self.kernel.LocalFree(descriptor):
                 raise WindowsErrorCode("ROLLBACK_INCOMPLETE")

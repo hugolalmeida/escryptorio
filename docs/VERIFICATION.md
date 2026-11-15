@@ -340,3 +340,13 @@ A revisão do diff confirma escopo em ai_boundary, testes e documentação. Zero
 Readiness PARTIAL_POC. ISOLATED_RESEARCH permanece indisponível. A próxima etapa mínima proposta é revisar autorização e rollback de perfil AppContainer descartável e compatibilidade do runtime para testar negação real de arquivos e loopback. Capacidades, hipóteses, tentativas falhas, rollback e relatório de 30 itens em [AI_ISOLATION_TEST_RESULTS.md](AI_ISOLATION_TEST_RESULTS.md), [AI_WINDOWS_ISOLATION_POC.md](AI_WINDOWS_ISOLATION_POC.md) e [WINDOWS_ISOLATION_CAPABILITIES.md](WINDOWS_ISOLATION_CAPABILITIES.md).
 
 A última execução `.venv/Scripts/python -m pytest backend/tests/test_windows_isolation.py -q`, posterior ao bloqueio persistente de reuso após rollback incompleto, terminou com 28 passed, um aviso Starlette/httpx, em 11,79 s e saída 0. A suíte completa repetida teve 455 passed/1 skipped em 148,32 s. A execução direcionada teve 171 passed/1 skipped em 75,02 s. O skip é a criação de symlink recusada pelo Windows. O teste final confirma propagação de ROLLBACK_INCOMPLETE mesmo após remover a árvore sintética.
+
+
+# Prepara??o AppContainer ? 2.3D3A.2
+
+Etapa n?o persistente conclu?da como PREPARATION_COMPLETE_AWAITING_APPROVAL. DACLs sint?ticas s?o capturadas antes das altera??es e conferidas ap?s aplica??o. Lifecycle e evid?ncia fechada foram preparados com testes mockados. Perfil real permanece NOT_AUTHORIZED, sem adapter nativo ou execu??o de CreateAppContainerProfile. Erro 203 e runtime 0xC0000022 foram reproduzidos, com causas espec?ficas ainda n?o confirmadas. Plano e testes em [AI_APPCONTAINER_APPROVAL_PLAN.md](AI_APPCONTAINER_APPROVAL_PLAN.md), [AI_APPCONTAINER_COMPATIBILITY.md](AI_APPCONTAINER_COMPATIBILITY.md) e [AI_ISOLATION_COMPATIBILITY_TESTS.md](AI_ISOLATION_COMPATIBILITY_TESTS.md). ISOLATED_RESEARCH permanece indispon?vel.
+
+
+Baseline `.venv/Scripts/python -m pytest backend/tests -q` antes das altera??es teve 455 passed/1 skipped em 158,26 s, sa?da 0. Su?te posterior teve 470 passed/1 skipped em 145,99 s, sa?da 0. O skip de symlink e o aviso Starlette/httpx s?o preexistentes. A captura de ACLs em duas passagens foi ajustada ap?s iniciar essa su?te e foi verificada posteriormente no arquivo Windows junto aos testes de perfil. Diagn?stico e replays via stdin terminaram com sa?da 0 e REPLAY_CLEANUP_COMPLETE. `git diff --check` passou e o artefato %SystemDrive% permaneceu ausente.
+
+Execu??o direcionada final: Windows isolation + profile_plan, 43 passed, um aviso preexistente, 13,66 s, sa?da 0. Nenhum perfil real foi criado.

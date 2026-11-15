@@ -51,3 +51,8 @@
 - Zero regras persistentes, contas, perfis ou ACLs externas criados. Perfil AppContainer foi DEFERRED por exigir autorização futura conforme o pedido. CPU/disco DEFERRED. Performance observada é limitada às amostras, sem garantia universal ou teste de escape de código hostil.
 - Próximo passo mínimo depende de autorização específica para investigar perfil AppContainer descartável e runtime com testes de negação real de arquivo/loopback. Relatório dos 30 itens, comandos e limites em [AI_ISOLATION_TEST_RESULTS.md](../docs/AI_ISOLATION_TEST_RESULTS.md), [PoC](../docs/AI_WINDOWS_ISOLATION_POC.md) e [capacidades](../docs/WINDOWS_ISOLATION_CAPABILITIES.md).
 - Verificação posterior ao último reforço de rollback: arquivo Windows com 28 passed, um aviso preexistente, 11,79 s e saída 0. Instância com falha nativa de limpeza bloqueia novo launch e conserva ROLLBACK_INCOMPLETE após remoção da árvore. A falha de diretório possui retry de limpeza separado e testado.
+
+# 2.3D3A.2
+Baseline 7af1767 main limpa. Lifecycle inerte, contrato fechado e read-back de DACL preparados. Perfil NOT_AUTHORIZED. Diagn?sticos repetiram 203 e 0xC0000022, causas n?o confirmadas. Plano em docs/AI_APPCONTAINER_APPROVAL_PLAN.md. Pr?xima decis?o humana ? autorizar especificamente o perfil reservado. Replays 38/38, 14 legados e fingerprint preservados, sa?da 0. Baseline e resultados finais em docs/VERIFICATION.md.
+
+Baseline atual 455/1 skip, su?te posterior 470/1 skip, sa?das 0. Perfil real n?o criado. DACL capture em duas passagens verificada nos testes direcionados ap?s a su?te. Commit desta fase usa feat: prepare appcontainer isolation verification.

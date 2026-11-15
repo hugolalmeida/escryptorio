@@ -65,3 +65,8 @@ CPU e disco ficam DEFERRED. JOB_ONLY conserva permissões e rede do usuário, co
 A próxima etapa mínima proposta é uma revisão autorizada de criação/remoção de perfil AppContainer descartável, compatibilidade do runtime, ACL e testes reais de negação de arquivos e loopback. A criação do perfil ficou adiada por envolver estado persistente reservado pelo pedido para autorização futura. READY_FOR_D3B_REVIEW continua pendente dessas provas.
 
 Após o reforço final de rollback, uma instância com falha nativa de limpeza bloqueia novos launches e conserva ROLLBACK_INCOMPLETE mesmo se a árvore temporária for removida. O teste de falha de diretório permite repetir a limpeza da mesma raiz conhecida após restaurar o método, pois essa falha é distinguida da falha nativa. A execução Windows posterior verifica ambos os casos. Acesso do processo JOB_ONLY ao supervisor e duplicação de handles por código hostil permanecem NOT_VERIFIED.
+
+
+# Prepara??o AppContainer ? 2.3D3A.2
+
+Etapa n?o persistente conclu?da como PREPARATION_COMPLETE_AWAITING_APPROVAL. DACLs sint?ticas s?o capturadas antes das altera??es e conferidas ap?s aplica??o. Lifecycle e evid?ncia fechada foram preparados com testes mockados. Perfil real permanece NOT_AUTHORIZED, sem adapter nativo ou execu??o de CreateAppContainerProfile. Erro 203 e runtime 0xC0000022 foram reproduzidos, com causas espec?ficas ainda n?o confirmadas. Plano e testes em [AI_APPCONTAINER_APPROVAL_PLAN.md](AI_APPCONTAINER_APPROVAL_PLAN.md), [AI_APPCONTAINER_COMPATIBILITY.md](AI_APPCONTAINER_COMPATIBILITY.md) e [AI_ISOLATION_COMPATIBILITY_TESTS.md](AI_ISOLATION_COMPATIBILITY_TESTS.md). ISOLATED_RESEARCH permanece indispon?vel.

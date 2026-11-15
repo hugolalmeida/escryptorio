@@ -309,10 +309,14 @@ class PocEnvironment:
         package = self.native.sid_text(self.sid)
         allowed = f"D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;{user})(A;OICI;GRGX;;;{package})(A;OICI;GRGX;;;RC)"
         protected = f"D:P(D;OICI;FA;;;{package})(D;OICI;FA;;;RC)(A;OICI;FA;;;SY)(A;OICI;FA;;;{user})"
-        for path in (self.root, *self.root.rglob("*")):
+        self.initial_security = {}
+        paths = (self.root, *self.root.rglob("*"))
+        for path in paths:
             # Root and every descendant were created exclusively by this instance.
             if path.is_symlink() or not path.resolve().is_relative_to(self.root):
                 raise EvidenceError("POC_PATH_INVALID")
+            self.initial_security[path.relative_to(self.root).as_posix()] = bytes(self.native.file_security(path))
+        for path in paths:
             self.native.apply_dacl(path, protected if "protected" in path.relative_to(self.root).parts else allowed)
 
     def __exit__(self, kind, value, traceback):
