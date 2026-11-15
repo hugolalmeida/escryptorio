@@ -11,6 +11,26 @@ from .core import EvidenceError, MAX_BYTES, canonical, package, report, strict_j
 FILES = ("evidence.json", "report.json", "source.json")
 
 
+def manifest_version(path):
+    """Read only the bounded, non-symlink manifest to select one verifier."""
+    root = Path(path).absolute()
+    if not root.is_dir() or any(p.is_symlink() for p in (root, *root.parents)):
+        raise EvidenceError("EXPORT_MANIFEST_INVALID")
+    manifest_path = root / "manifest.json"
+    if manifest_path.is_symlink() or not manifest_path.is_file():
+        raise EvidenceError("EXPORT_MANIFEST_INVALID")
+    try:
+        with manifest_path.open("rb") as handle:
+            manifest = strict_json(handle.read(MAX_BYTES + 1))
+    except OSError:
+        raise EvidenceError("EXPORT_MANIFEST_INVALID") from None
+    if type(manifest) is not dict or set(manifest) != {"schema_version", "files"} or type(manifest["schema_version"]) is not int or type(manifest["files"]) is not dict:
+        raise EvidenceError("EXPORT_MANIFEST_INVALID")
+    if manifest["schema_version"] not in (1, 2):
+        raise EvidenceError("SCHEMA_UNSUPPORTED")
+    return manifest["schema_version"]
+
+
 def _bytes(value):
     data = canonical(value)
     if len(data) > MAX_BYTES:

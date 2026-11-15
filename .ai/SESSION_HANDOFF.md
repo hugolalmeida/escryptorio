@@ -24,3 +24,8 @@
 - Baseline `c97f00ab61a61616c6a0fbb834c8e36fc88dcfc9`; confirme o commit final e o estado pelo Git.
 - Claims estruturadas e evidência de backtest offline v2 em [AI_CLAIM_VALIDATION.md](../docs/AI_CLAIM_VALIDATION.md); reconciliação não é recálculo, PIT é desconhecido.
 - Testes, replays, fingerprint e limitações desta fase: [VERIFICATION.md](../docs/VERIFICATION.md). Nenhuma ordem, IA, migration ou alteração no motor.
+# Atualização 2.3D2.H1
+
+- Baseline `2816d67c9ee919f098244d4952447ae4f7f1de2c`; consulte o Git para o commit final.
+- Política v1/v2, fixtures sintéticas geradas por `c97f00a`, matriz e riscos: [AI_EVIDENCE_HARDENING.md](../docs/AI_EVIDENCE_HARDENING.md).
+- Verificações e limitações em [VERIFICATION.md](../docs/VERIFICATION.md); sem IA, ordens, alteração do motor ou migrations.

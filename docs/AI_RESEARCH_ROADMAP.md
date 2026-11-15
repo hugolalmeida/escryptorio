@@ -22,3 +22,6 @@ Fundação determinística local parcialmente implementada: uma fonte histórica
 # Atualização 2.3D2
 
 Claims factuais e métricas de backtest persistido têm contratos determinísticos e verificação offline v2; PIT causal permanece desconhecido. Comparações entre estratégias, Arena como fonte e agentes permanecem adiados. Ver [AI_CLAIM_VALIDATION.md](AI_CLAIM_VALIDATION.md).
+# Atualização 2.3D2.H1
+
+Hardening e limites de compatibilidade estão em [AI_EVIDENCE_HARDENING.md](AI_EVIDENCE_HARDENING.md). Não foi iniciada a 2.3D3 nem implementada IA.

@@ -5,14 +5,19 @@ import time
 from pathlib import Path
 
 from cryptolab.config import Settings
-from .bundle import export_bundle, verify_bundle
+from .bundle import export_bundle, manifest_version, verify_bundle
 from .core import EvidenceError, MAX_BYTES, package, report, source_from_db, strict_json
 from .backtest import freeze_backtest
 from .bundle_v2 import export as export_v2, verify as verify_v2
 
 
+class SafeParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise EvidenceError("ARGUMENT_INVALID")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Offline deterministic research evidence")
+    parser = SafeParser(description="Offline deterministic research evidence")
     commands = parser.add_subparsers(dest="command", required=True)
     build = commands.add_parser("build")
     build.add_argument("--source", required=True)
@@ -29,8 +34,8 @@ def main():
     backtest.add_argument("--database")
     verify = commands.add_parser("verify")
     verify.add_argument("--bundle", required=True)
-    args = parser.parse_args()
     try:
+        args = parser.parse_args()
         if args.command == "build":
             if args.source != "approved-history":
                 raise EvidenceError("UNSUPPORTED_SOURCE")
@@ -41,6 +46,7 @@ def main():
             rep = report(pkg, source, now)
             export_bundle(args.output, pkg, rep, source)
             result = verify_bundle(args.output)
+            result["bundle_schema_version"] = 1
         elif args.command == "build-backtest":
             settings = Settings.from_env()
             with Path(args.claims).open("rb") as handle:
@@ -49,14 +55,17 @@ def main():
             now = time.time_ns() // 1_000_000
             export_v2(args.output, frozen, claims, args.as_of_ms, now, now)
             result = verify_v2(args.output)
+            result["bundle_schema_version"] = 2
         else:
-            result = verify_v2(args.bundle) if (Path(args.bundle) / "frozen.json").exists() else verify_bundle(args.bundle)
+            version = manifest_version(args.bundle)
+            result = verify_v2(args.bundle) if version == 2 else verify_bundle(args.bundle)
+            result["bundle_schema_version"] = version
         print(json.dumps(result, sort_keys=True))
     except EvidenceError as exc:
-        print(json.dumps({"error": str(exc)}))
+        print(json.dumps({"error": str(exc), "validation": "INVALID"}))
         return 1
     except (OSError, RuntimeError):
-        print(json.dumps({"error": "EVIDENCE_OPERATION_FAILED"}))
+        print(json.dumps({"error": "EVIDENCE_OPERATION_FAILED", "validation": "INVALID"}))
         return 1
     return 0
 

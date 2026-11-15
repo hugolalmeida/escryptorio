@@ -11,6 +11,7 @@ from cryptolab.history.storage import HistoryError
 
 MAX_BYTES = 64 * 1024 * 1024  # accommodates the history limit of 100,000 candles
 MAX_DEPTH = 64
+LEGACY_V1_MAX_DEPTH = 256
 HEX = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -18,9 +19,9 @@ class EvidenceError(ValueError):
     pass
 
 
-def canonical(value):
+def canonical(value, max_depth=MAX_DEPTH):
     def check(obj, depth=0):
-        if depth > MAX_DEPTH:
+        if depth > max_depth:
             raise EvidenceError("SCHEMA_INVALID")
         if obj is None or type(obj) in (str, int, bool):
             return
@@ -43,7 +44,7 @@ def digest(domain, value):
     return hashlib.sha256(domain.encode("ascii") + b"\0" + canonical(value)).hexdigest()
 
 
-def strict_json(raw):
+def strict_json(raw, max_depth=MAX_DEPTH):
     def pairs(items):
         out = {}
         for key, value in items:
@@ -55,7 +56,7 @@ def strict_json(raw):
         raise EvidenceError("SIZE_LIMIT")
     try:
         value = json.loads(raw, object_pairs_hook=pairs, parse_constant=lambda _: (_ for _ in ()).throw(ValueError()))
-        canonical(value)
+        canonical(value, max_depth=max_depth)
         return value
     except (ValueError, UnicodeDecodeError, RecursionError):
         raise EvidenceError("SCHEMA_INVALID") from None
@@ -105,19 +106,19 @@ def source_from_db(path, source_id):
             source = {"id": row[0], "payload": row[1], "manifest": row[2]}
             if sum(len(v.encode("utf-8")) for v in source.values()) > MAX_BYTES:
                 raise EvidenceError("SIZE_LIMIT")
-            verify_source(source)
+            verify_source(source, max_depth=LEGACY_V1_MAX_DEPTH)
             return source
     except sqlite3.Error:
         raise EvidenceError("SOURCE_UNAVAILABLE") from None
 
 
-def verify_source(source):
+def verify_source(source, max_depth=MAX_DEPTH):
     if type(source) is not dict or set(source) != {"id", "payload", "manifest"} or not all(type(x) is str for x in source.values()):
         raise EvidenceError("SOURCE_UNVERIFIED")
     if not HEX.fullmatch(source["id"]):
         raise EvidenceError("SOURCE_UNVERIFIED")
-    strict_json(source["payload"].encode())
-    strict_json(source["manifest"].encode())
+    strict_json(source["payload"].encode(), max_depth=max_depth)
+    strict_json(source["manifest"].encode(), max_depth=max_depth)
     try:
         dataset = DatasetReader(FrozenStore(source)).read(source["id"])
     except (HistoryError, ValueError, TypeError, OverflowError):
@@ -129,7 +130,7 @@ def package(source, mode, as_of_ms, captured_at_ms):
     if mode not in ("RETROSPECTIVE", "RECENT_OBSERVATION"):
         raise EvidenceError("SCHEMA_UNSUPPORTED")
     timestamp(as_of_ms); timestamp(captured_at_ms)
-    data = verify_source(source)
+    data = verify_source(source, max_depth=LEGACY_V1_MAX_DEPTH)
     if data.end_time * 1000 > as_of_ms or as_of_ms > captured_at_ms:
         raise EvidenceError("TEMPORAL_LOOKAHEAD")
     manifest = data.manifest
@@ -153,7 +154,7 @@ def report(pkg, source, generated_at_ms):
     timestamp(generated_at_ms)
     if generated_at_ms < pkg["captured_at_ms"]:
         raise EvidenceError("INVALID_TIMESTAMP")
-    data = verify_source(source)
+    data = verify_source(source, max_depth=LEGACY_V1_MAX_DEPTH)
     ref = source["id"]
     body = {"schema_version": 1, "report_type": "DETERMINISTIC_REPORT", "evidence_package_id": pkg["capture_id"],
             "research_mode": pkg["mode"], "research_objective": "Describe verified historical dataset",

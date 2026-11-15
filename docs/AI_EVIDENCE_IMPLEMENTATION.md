@@ -30,3 +30,6 @@ Testes sintéticos verificam identidade, janela, adulteração, campos inesperad
 # Extensão 2.3D2
 
 O bundle v2 acrescenta claims e resultado de backtest congelado, sem modificar o contrato v1; ver [AI_CLAIM_VALIDATION.md](AI_CLAIM_VALIDATION.md). A afirmação de métrica é reconciliada ao resultado persistido, não recalculada. Limite novo de profundidade JSON: 64.
+# Atualização 2.3D2.H1
+
+O verificador v1 aceita conteúdo histórico embutido até profundidade 256; o v2 permanece em 64. IDs v1 não foram alterados. A seleção CLI usa o schema estrito do manifesto; ver [AI_EVIDENCE_HARDENING.md](AI_EVIDENCE_HARDENING.md).
