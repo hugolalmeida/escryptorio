@@ -226,3 +226,82 @@ O v1 original `c97f00a` gerou fixtures sintéticas com IDs e bytes fixos. O cód
 Fingerprint financeiro: `e3adfd0e20b3cdcad31a596ae3287aabeebcb65abc458f7541f23f063ecc3f62`. Em backup temporário de origem SQLite somente leitura, **38/38 replays**, incluindo **14 legados**, preservaram IDs; comando e limpeza terminaram com código zero. As comparações de estado financeiro antes/depois são de banco sintético; não se comparou integralmente o banco pessoal. Sem mudanças frontend, build, typecheck e Playwright não foram repetidos.
 
 Não foram comprovados: ausência de corridas com processo hostil que controla o mesmo diretório, autenticidade externa por SHA, compatibilidade com bundle real não localizado, desempenho no limite de 100.000 candles ou cobertura adversarial integral. Não houve alterações de engine, estratégias, migrations, ledger, ordens ou integração de IA.
+
+# Verificação 2.3D3A · contexto e mock supervisionado · 15/11/2026
+
+## Baseline e comandos executados
+
+Branch main, HEAD inicial `22f59e8dc01e1febd358a7dce3c332f4dd7d8cbc`, árvore limpa e diff vazio contra a referência solicitada. Foram executados `git status -sb`, `git rev-parse HEAD`, `git log -5 --oneline` e `git diff 22f59e8dc01e1febd358a7dce3c332f4dd7d8cbc --stat`. A identidade restrita recusou Git por proprietário divergente e a venv por acesso ao Python base. As verificações foram repetidas com a identidade proprietária, sem mudar configuração global do Git.
+
+| Execução | Resultado realmente observado |
+| --- | --- |
+| `.venv/Scripts/python -m pytest backend/tests -q` inicial | 354 passed, 1 skipped, 1 warning, 96,91 s |
+| `pytest backend/tests/test_ai_boundary.py -q` primeira execução | 51 passed e 17 failed, 47,95 s. Fixtures passavam ambiente vazio no Windows, resultando em WORKER_UNAVAILABLE |
+| Mesmo arquivo após SystemRoot explícito nas fixtures | 68 passed, 42,86 s |
+| Mesmo arquivo após testes adicionais de minimização/contabilidade | 71 passed, 44,58 s |
+| `.venv/Scripts/python -m pytest backend/tests -q` após implementação | 427 passed, 1 skipped, 1 warning, 148,27 s |
+| Execução final direcionada abaixo, após reforço do gateway | 143 passed, 1 skipped, 1 warning, 60,14 s |
+| `pytest backend/tests/test_evidence_h1.py -k symlink -q -rs` | 1 skipped, 34 deselected, 0,73 s. Windows recusou criação de symlink |
+| Compilação `compile()` dos fontes novos e teste, links locais dos três documentos | COMPILE_AND_DOCUMENT_LINKS_OK |
+| Backup SQLite temporário, replay e fluxo offline | 38/38 IDs idênticos, 14 legados, VALIDATED_MOCK / NOT_SANDBOXED, limpeza OK, saída 0, 6,53 s |
+
+A execução final direcionada utilizou a venv com `-m pytest` e estes arquivos, todos com `-q`.
+
+```powershell
+.venv/Scripts/python -m pytest backend/tests/test_ai_boundary.py backend/tests/test_evidence.py backend/tests/test_evidence_backtest.py backend/tests/test_evidence_claims.py backend/tests/test_evidence_hardening.py backend/tests/test_evidence_h1.py -q
+```
+
+O aviso Starlette/httpx é preexistente. A suíte completa foi iniciada antes do último reforço de validação do envelope confiável no gateway. O comando direcionado final executou esse reforço e os 73 casos da fronteira. O baseline inicial foi combinado com consultas Windows, e o processo composto terminou com código 1 por argumento inválido em Get-WindowsOptionalFeature após o pytest aprovado. Consultas individuais posteriores registraram QUERY_UNAVAILABLE. A suíte completa final e a execução direcionada terminaram com código 0.
+
+## Integridade e fluxo offline
+
+Fingerprint recalculado por `replay_fingerprint()` e preservado.
+
+```text
+e3adfd0e20b3cdcad31a596ae3287aabeebcb65abc458f7541f23f063ecc3f62
+```
+
+Um script local via stdin para `.venv/Scripts/python -` abriu `data/cryptolab.sqlite3` usando URI `mode=ro`, executou query_only e `Connection.backup` para diretório temporário. Na cópia, enumerou research_runs e chamou ResearchService.verify para cada um, exigindo identical=True. Identificou 14 legados por fingerprint do manifesto diferente do atual. Os 38 IDs foram preservados. As conexões foram fechadas e o diretório removido antes da saída 0.
+
+Na mesma cópia, o script congelou um resultado existente, criou bundle v2 temporário com claim net_return_pct do valor persistido e as-of no fim do dataset, construiu contexto e executou DEVELOPMENT_MOCK. Retornou VALIDATED_MOCK, NOT_SANDBOXED e context hash `56f3a8a824ace36f9694dc56ec2044465966e158f1081febe3c63c9226747b22`. Esse hash identifica esse conteúdo específico do ensaio. A captura completa foi descartada após a verificação. A origem foi aberta somente para leitura, e a comparação integral antes/depois foi realizada na fixture sintética.
+
+O teste sintético compara todos os objetos e linhas representados por iterdump e os bytes originais do bundle. Inclui historical_datasets, research_protocols/runs, arena_experiments/results, paper_wallets/events/heads, paper_bindings e tabelas associadas, paper_decisions e tabelas associadas, paper_mark_evidence, paper_execution_evidence, monitor_signals/runtime/leases e collection_status. Muitas tabelas financeiras/monitor estão vazias nessa fixture. O teste preserva também os candles e dados de coleta existentes no banco sintético.
+
+## Relatório de entrega
+
+| Item | Estado e resultado |
+| --- | --- |
+| 1. HEAD inicial | TESTED — 22f59e8dc01e1febd358a7dce3c332f4dd7d8cbc |
+| 2. HEAD final | DOCUMENTED — informado na resposta final e identificável pelo commit `feat: add isolated research context foundation` |
+| 3. Arquitetura | IMPLEMENTED, TESTED — builder confiável → envelope mínimo → subprocesso mock → gateway externo |
+| 4. Arquivos criados | IMPLEMENTED — ai_boundary/{__init__,contracts,context,gateway,mock_worker,runtime,cli}.py, backend/tests/test_ai_boundary.py e três docs AI_RESEARCH_CONTEXT/ISOLATION/BUDGET.md |
+| 5. Arquivos modificados | DOCUMENTED — AI_RESEARCH_ARCHITECTURE, AI_RESEARCH_ROADMAP, AI_THREAT_MODEL, ARCHITECTURE, VERIFICATION, adr/004-isolamento e .ai/SESSION_HANDOFF.md |
+| 6. Contrato | IMPLEMENTED, TESTED — Context v1 estrito, fechado, imutável, até 32.768 bytes |
+| 7. Autorizados | IMPLEMENTED, TESTED — escopo, tempo, hashes, claims reconciliadas, unidades, métodos, fontes, limitações e incerteza |
+| 8. Excluídos | IMPLEMENTED, TESTED no payload — candles, fonte bruta, ledger, caminhos, ambiente, credenciais e warnings livres |
+| 9. Content hash | TESTED — contexto reproduzível entre capturas, novo domínio, hash do ensaio acima |
+| 10. Mock | IMPLEMENTED, TESTED — stdlib determinística, operação única DESCRIBE_VERIFIED_CONTEXT |
+| 11. Gateway | IMPLEMENTED, TESTED — reconstrução externa e reconciliação integral, inclusive envelope e uso |
+| 12. Budget | IMPLEMENTED, TESTED — reservas por tentativa, falhas contabilizadas, sessão efêmera com lock |
+| 13. Tokens | IMPLEMENTED, TESTED — ceil(bytes/4), estimativa simulada, 16.384 por entrada/saída por tentativa |
+| 14. Bytes | IMPLEMENTED, TESTED — entrada até 65.536, stdout/stderr até 65.536 cada |
+| 15. Processos e tempo | IMPLEMENTED, TESTED — 5 s e concorrência padrão 1 por sessão. Memória/CPU/descendentes DEFERRED |
+| 16. Windows | TESTED — Home 10.0.26200 x64, Python 3.10.11, hipervisor reportado inativo |
+| 17. Alternativas | DOCUMENTED — subprocesso, Restricted Token/ACL/Job, AppContainer, Sandbox/VM e Docker |
+| 18. Controles concretos | IMPLEMENTED, TESTED — comando fixo, ambiente mínimo, cotas, timeout, cancelamento e espera do filho direto |
+| 19. Indisponíveis no produto | DEFERRED — launcher restrito, ACL dedicada, limites de memória e egress. APIs Win32 presentes, contenção NOT_VERIFIED |
+| 20. Exfiltração | TESTED — canários sintéticos e operações proibidas por contrato. Bloqueio real de FS/rede NOT_VERIFIED |
+| 21. Adversariais | TESTED — JSON inválido/duplicado, IDs, hashes, métricas, unidade, fonte, janela, campos, PIT, uso, saída excessiva, timeout e exit code |
+| 22. Causalidade | TESTED — dataset posterior recusado, PIT desconhecido preservado, claim causal excluída e limitações obrigatórias |
+| 23. Não mutação | TESTED — SQLite sintético integral e bytes do bundle antes/depois. Banco pessoal integral NOT_VERIFIED |
+| 24. Fingerprint | TESTED — valor e3adfd0e…ecc3f62 preservado, valor completo acima |
+| 25. Replays | TESTED — 38/38, 14 legados, backup temporário removido e saída 0 |
+| 26. Python | TESTED — 427 aprovados/1 skip, regressão direcionada final 143/1 skip |
+| 27. Limitações | DOCUMENTED — v1 adiado no builder, warnings livres suprimidos, schema de saída limitado ao mock |
+| 28. Riscos | DOCUMENTED — permissões do usuário, memória/CPU/disco sem quotas de SO, rede sem contenção, corridas e autenticidade desconhecida |
+| 29. Gate D3B | DOCUMENTED — NOT_READY por fronteiras críticas de SO ainda sem implementação comprovada |
+| 30. Decisões humanas | PROPOSED — mecanismo de isolamento, política de privacidade/retenção, fornecedor/orçamento futuro e aceitação explícita dos riscos |
+
+## Escopo e verificações restantes
+
+Arquivos financeiros, motor, estratégias, simulador, migrations, rotas, frontend, dependências e dados históricos têm zero alterações neste diff. As flags existentes continuam sob os contratos anteriores, exercitados pela suíte. Playwright, build e typecheck foram dispensados nesta entrega restrita a backend/documentação. A verificação de performance é limitada ao tempo observado das execuções, sem benchmark de limite máximo. Negação de execução financeira pelo SO e resistência de uma LLM a prompt injection permanecem NOT_VERIFIED. O mock e seu gateway não oferecem caminho de ação financeira. O isolamento forte e a fase D3B ficam DEFERRED.

@@ -14,3 +14,9 @@ Ameaças pressupõem fontes, respostas de modelo e outros agentes não confiáve
 | Confusão de autoridade / alta | texto persuasivo interpretado como plano ou autorização | saída rotulada não executável, schema fechado e política de conteúdo; nenhum consumidor de execução | instrução em texto livre, campos desconhecidos, tentativa de encaminhar conteúdo ao planner; revisão humana necessária |
 
 IDs e citações não garantem pertinência, autoria autêntica ou verdade; validação semântica de linguagem não é completa. Estado `VALIDATED` não deve ser apresentado como conselho financeiro. Qualquer capacidade nova de rede, fornecedor, autenticação, persistência ou ferramenta exige revisão específica e autorização; nenhuma é concedida neste estudo.
+
+# Fundação de contexto e mock · 2.3D3A
+
+O subconjunto determinístico está IMPLEMENTED e TESTED em `cryptolab.research.ai_boundary`. O builder aceita bundles v2 verificados e aplica allowlist. O mock stdlib executa em subprocesso supervisionado com gateway independente e orçamento simulado. DEVELOPMENT_MOCK devolve NOT_SANDBOXED. ISOLATED_RESEARCH retorna ISOLATED_RESEARCH_UNAVAILABLE. O gate para D3B é NOT_READY por ausência de fronteiras de SO comprovadas para arquivos, credenciais, rede e recursos.
+
+Contratos, minimização e causalidade em [AI_RESEARCH_CONTEXT.md](AI_RESEARCH_CONTEXT.md). Ambiente Windows, matriz de alternativas e riscos em [AI_RESEARCH_ISOLATION.md](AI_RESEARCH_ISOLATION.md). Limites e contabilidade em [AI_RESEARCH_BUDGET.md](AI_RESEARCH_BUDGET.md). Resultados realmente executados em [VERIFICATION.md](VERIFICATION.md). A investigação e implementação de isolamento forte ficam DEFERRED.

@@ -132,3 +132,9 @@ Uso privado em loopback, sem autenticação multiusuário; não publicar. API n�
 # Claims offline 2.3D2
 
 O validador determinístico de claims opera sobre fontes históricas congeladas, sem tocar no motor financeiro. A versão v2 acrescenta resultado de backtest e reconciliação offline; ver [AI_CLAIM_VALIDATION.md](AI_CLAIM_VALIDATION.md).
+
+# Fundação de contexto e mock · 2.3D3A
+
+O subconjunto determinístico está IMPLEMENTED e TESTED em `cryptolab.research.ai_boundary`. O builder aceita bundles v2 verificados e aplica allowlist. O mock stdlib executa em subprocesso supervisionado com gateway independente e orçamento simulado. DEVELOPMENT_MOCK devolve NOT_SANDBOXED. ISOLATED_RESEARCH retorna ISOLATED_RESEARCH_UNAVAILABLE. O gate para D3B é NOT_READY por ausência de fronteiras de SO comprovadas para arquivos, credenciais, rede e recursos.
+
+Contratos, minimização e causalidade em [AI_RESEARCH_CONTEXT.md](AI_RESEARCH_CONTEXT.md). Ambiente Windows, matriz de alternativas e riscos em [AI_RESEARCH_ISOLATION.md](AI_RESEARCH_ISOLATION.md). Limites e contabilidade em [AI_RESEARCH_BUDGET.md](AI_RESEARCH_BUDGET.md). Resultados realmente executados em [VERIFICATION.md](VERIFICATION.md). A investigação e implementação de isolamento forte ficam DEFERRED.

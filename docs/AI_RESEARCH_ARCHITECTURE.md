@@ -51,3 +51,9 @@ Bull descreve tese e contraprovas; Bear constrói objeções, não short; Risk A
 SMA20, EMA50, RSI Wilder14 e ATR14 existem. Um eventual classificador poderia definir, antes de testes, janelas explícitas e regras causais para tendência, lateralidade e volatilidade; não há limiares calibrados nesta fase. Proposta: `TREND_UP`, `TREND_DOWN`, `SIDEWAYS`, `HIGH_VOLATILITY`, `INSUFFICIENT_DATA`, `UNKNOWN`; volatilidade pode coexistir com tendência e não deve ser forçada numa categoria exclusiva. Testar warm-up, prefixos invariantes, estabilidade sob pequenas perturbações, mudanças de regime, períodos ausentes e OOS congelado na Arena. Não prevê retorno, não altera estratégia nem autoriza operações.
 
 Contratos propostos: [AI_EVIDENCE_CONTRACTS.md](AI_EVIDENCE_CONTRACTS.md); ameaças: [AI_THREAT_MODEL.md](AI_THREAT_MODEL.md); decisões: [ADR-001](adr/001-framework.md) a [ADR-006](adr/006-relatorios.md).
+
+# Fundação de contexto e mock · 2.3D3A
+
+O subconjunto determinístico está IMPLEMENTED e TESTED em `cryptolab.research.ai_boundary`. O builder aceita bundles v2 verificados e aplica allowlist. O mock stdlib executa em subprocesso supervisionado com gateway independente e orçamento simulado. DEVELOPMENT_MOCK devolve NOT_SANDBOXED. ISOLATED_RESEARCH retorna ISOLATED_RESEARCH_UNAVAILABLE. O gate para D3B é NOT_READY por ausência de fronteiras de SO comprovadas para arquivos, credenciais, rede e recursos.
+
+Contratos, minimização e causalidade em [AI_RESEARCH_CONTEXT.md](AI_RESEARCH_CONTEXT.md). Ambiente Windows, matriz de alternativas e riscos em [AI_RESEARCH_ISOLATION.md](AI_RESEARCH_ISOLATION.md). Limites e contabilidade em [AI_RESEARCH_BUDGET.md](AI_RESEARCH_BUDGET.md). Resultados realmente executados em [VERIFICATION.md](VERIFICATION.md). A investigação e implementação de isolamento forte ficam DEFERRED.

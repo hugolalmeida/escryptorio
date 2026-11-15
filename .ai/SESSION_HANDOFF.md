@@ -29,3 +29,13 @@
 - Baseline `2816d67c9ee919f098244d4952447ae4f7f1de2c`; consulte o Git para o commit final.
 - Política v1/v2, fixtures sintéticas geradas por `c97f00a`, matriz e riscos: [AI_EVIDENCE_HARDENING.md](../docs/AI_EVIDENCE_HARDENING.md).
 - Verificações e limitações em [VERIFICATION.md](../docs/VERIFICATION.md); sem IA, ordens, alteração do motor ou migrations.
+
+# Atualização 2.3D3A · 15/11/2026
+
+- Baseline conferido na main, árvore limpa em `22f59e8dc01e1febd358a7dce3c332f4dd7d8cbc`. O commit desta entrega usa `feat: add isolated research context foundation`. Confirme HEAD/status atuais pelo Git.
+- IMPLEMENTED e TESTED — builder somente v2, projeção fechada, mock stdlib em subprocesso fixo, gateway independente, budget efêmero e CLI local. Documentos [contexto](../docs/AI_RESEARCH_CONTEXT.md), [isolamento](../docs/AI_RESEARCH_ISOLATION.md) e [orçamento](../docs/AI_RESEARCH_BUDGET.md).
+- DEVELOPMENT_MOCK é NOT_SANDBOXED. ISOLATED_RESEARCH falha fechado com ISOLATED_RESEARCH_UNAVAILABLE. Gate D3B NOT_READY. Launcher restrito, ACL, egress, memória e árvore de processos ficam DEFERRED/NOT_VERIFIED. Windows Home, APIs Win32 presentes e criação/fechamento de Job Object comprovados somente no ensaio mínimo.
+- Baseline Python 354 passed/1 skipped. Suíte após implementação 427 passed/1 skipped em 148,27 s. Após reforço final do gateway, fronteira + cinco arquivos de evidência 143 passed/1 skipped em 60,14 s. Aviso Starlette/httpx preexistente. Skip real por Windows recusar criação de symlink. Primeira rodada nova teve 17 falhas de fixture por SystemRoot ausente, corrigidas e repetidas. Comandos e limites em [VERIFICATION.md](../docs/VERIFICATION.md).
+- Fingerprint `e3adfd0e20b3cdcad31a596ae3287aabeebcb65abc458f7541f23f063ecc3f62` e 38/38 replays preservados, incluindo 14 legados, em backup temporário com origem somente leitura. Fluxo offline mock VALIDATED_MOCK, limpeza e processo com saída 0. Comparação integral de não mutação usa banco sintético, com várias tabelas financeiras vazias.
+- Decisões de implementação — v1 adiado no builder, horários de captura excluídos da identidade, warnings livres suprimidos com limitação explícita e custo simulado conservador sem devolução de reserva em falha. Nenhuma dessas decisões autoriza LLM ou isolamento presumido.
+- Próxima etapa depende de nova autorização e provas das fronteiras de SO, privacidade/retenção e riscos. O resultado atual serve ao desenvolvimento determinístico/mock. Frontend e dependências ficaram fora do diff, portanto Playwright/build/typecheck não foram repetidos.
