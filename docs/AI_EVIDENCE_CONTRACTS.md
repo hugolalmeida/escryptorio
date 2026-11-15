@@ -45,3 +45,6 @@ Exemplo **sintético esquemático**, placeholders não são hashes reais nem pre
 ```
 
 É exemplo parcial ilustrativo, não uma instância validada do futuro schema. O schema completo deve definir obrigatoriedade, limites e algoritmos de identificação antes da implementação. Relatórios iniciais: exportação local explícita com hash e manifesto; persistência imutável transacional é adiada até requisito comprovado e ADR revisado.
+# Extensão implementada 2.3D2
+
+Claim v1 e bundle/report v2 estão documentados em [AI_CLAIM_VALIDATION.md](AI_CLAIM_VALIDATION.md). Contratos de agentes e linguagem livre permanecem propostos.

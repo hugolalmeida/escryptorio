@@ -19,3 +19,8 @@
 - Referência inicial: `6faa148dbd217b9df2362d0ba3f493b7f7f6e628`. Consulte o Git para o commit posterior e o estado atual.
 - Evidência histórica e relatório determinístico offline: [AI_EVIDENCE_IMPLEMENTATION.md](../docs/AI_EVIDENCE_IMPLEMENTATION.md). PIT desconhecido; nenhuma IA, execução, migration ou integração paper adicionada.
 - Testes, fingerprint e limitações desta fase em [VERIFICATION.md](../docs/VERIFICATION.md); resultados de fases anteriores não constituem revalidação atual.
+# Atualização 2.3D2
+
+- Baseline `c97f00ab61a61616c6a0fbb834c8e36fc88dcfc9`; confirme o commit final e o estado pelo Git.
+- Claims estruturadas e evidência de backtest offline v2 em [AI_CLAIM_VALIDATION.md](../docs/AI_CLAIM_VALIDATION.md); reconciliação não é recálculo, PIT é desconhecido.
+- Testes, replays, fingerprint e limitações desta fase: [VERIFICATION.md](../docs/VERIFICATION.md). Nenhuma ordem, IA, migration ou alteração no motor.

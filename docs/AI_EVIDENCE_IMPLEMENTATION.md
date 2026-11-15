@@ -27,3 +27,6 @@ $env:PYTHONPATH = 'backend'
 `--database` opcional especifica banco local; `--mode` seleciona `RETROSPECTIVE` ou `RECENT_OBSERVATION`. O diretório de saída deve ser novo e seu pai deve existir. Exporta em diretório temporário irmão, verifica e publica por rename; não sobrescreve propositalmente. Bundle contém exatamente `source.json`, `evidence.json`, `report.json` e `manifest.json`. A verificação offline confere arquivos, hashes, IDs, conteúdo, vínculos e tempos sem banco ou rede; não reconcilia com banco de origem. Sem assinatura, um atacante capaz de substituir toda a fonte e recalcular todos os hashes pode criar outro bundle íntegro. A validação de symlinks não elimina corridas de alteração por outro processo com acesso ao diretório.
 
 Testes sintéticos verificam identidade, janela, adulteração, campos inesperados, referências, manifesto e ausência de mutação das tabelas do banco isolado. Não inferir desses testes uma prova completa contra todas as falhas de sistema ou de point-in-time.
+# Extensão 2.3D2
+
+O bundle v2 acrescenta claims e resultado de backtest congelado, sem modificar o contrato v1; ver [AI_CLAIM_VALIDATION.md](AI_CLAIM_VALIDATION.md). A afirmação de métrica é reconciliada ao resultado persistido, não recalculada. Limite novo de profundidade JSON: 64.

@@ -19,3 +19,6 @@ Adversarial: prompt injection no texto e em saídas de agentes, chamadas de ferr
 # Atualização 2.3D1
 
 Fundação determinística local parcialmente implementada: uma fonte histórica aprovada, pacote e relatório offline. Point-in-time permanece não comprovado; fontes de backtest/Arena, LLM, agentes e interface ficam adiados. Ver [implementação](AI_EVIDENCE_IMPLEMENTATION.md).
+# Atualização 2.3D2
+
+Claims factuais e métricas de backtest persistido têm contratos determinísticos e verificação offline v2; PIT causal permanece desconhecido. Comparações entre estratégias, Arena como fonte e agentes permanecem adiados. Ver [AI_CLAIM_VALIDATION.md](AI_CLAIM_VALIDATION.md).

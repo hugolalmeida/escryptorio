@@ -10,3 +10,6 @@
 # Aditamento 2.3D1
 
 O primeiro relatório é determinístico, sem LLM, com identidade semântica e de geração separadas. Claims de modelo e decisões futuras permanecem propostos; ver [implementação](../AI_EVIDENCE_IMPLEMENTATION.md).
+# Aditamento 2.3D2
+
+Relatório determinístico v2 incorpora resultados de claims estruturadas e avisos originais do backtest. Métricas são reconciliadas ao registro congelado, não recalculadas. O v1 mantém seus domínios e formato; ver [validação](../AI_CLAIM_VALIDATION.md).

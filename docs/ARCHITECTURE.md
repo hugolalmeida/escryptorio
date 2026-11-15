@@ -129,3 +129,6 @@ Uso privado em loopback, sem autenticação multiusuário; não publicar. API n�
 # Evidências determinísticas offline (2.3D1)
 
 `cryptolab.research.evidence` lê dataset histórico aprovado em SQLite somente leitura, congela origem e gera relatório verificável offline. Não há rotas, rede, IA ou execução. Contratos e limites: [AI_EVIDENCE_IMPLEMENTATION.md](AI_EVIDENCE_IMPLEMENTATION.md).
+# Claims offline 2.3D2
+
+O validador determinístico de claims opera sobre fontes históricas congeladas, sem tocar no motor financeiro. A versão v2 acrescenta resultado de backtest e reconciliação offline; ver [AI_CLAIM_VALIDATION.md](AI_CLAIM_VALIDATION.md).

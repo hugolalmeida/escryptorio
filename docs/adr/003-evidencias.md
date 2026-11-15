@@ -10,3 +10,6 @@
 # Aditamento 2.3D1
 
 O subconjunto de dataset histórico aprovado é implementado por exportação manual offline, sem persistência nova no SQLite. Conteúdo e captura possuem domínios de hash distintos; PIT permanece desconhecido. A decisão anterior e suas questões abertas permanecem no histórico abaixo. Ver [implementação](../AI_EVIDENCE_IMPLEMENTATION.md).
+# Aditamento 2.3D2
+
+Bundle v2 congela dataset, protocolo e resultado persistido e valida seus vínculos offline, sem recálculo. Sua identidade usa novos domínios; autenticidade e disponibilidade histórica permanecem não comprovadas. Ver [validação](../AI_CLAIM_VALIDATION.md).

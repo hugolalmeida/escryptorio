@@ -10,6 +10,7 @@ from cryptolab.history.reader import DatasetReader
 from cryptolab.history.storage import HistoryError
 
 MAX_BYTES = 64 * 1024 * 1024  # accommodates the history limit of 100,000 candles
+MAX_DEPTH = 64
 HEX = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -18,19 +19,24 @@ class EvidenceError(ValueError):
 
 
 def canonical(value):
-    def check(obj):
+    def check(obj, depth=0):
+        if depth > MAX_DEPTH:
+            raise EvidenceError("SCHEMA_INVALID")
         if obj is None or type(obj) in (str, int, bool):
             return
         if type(obj) is list:
             for item in obj:
-                check(item)
+                check(item, depth + 1)
         elif type(obj) is dict and all(type(k) is str for k in obj):
             for item in obj.values():
-                check(item)
+                check(item, depth + 1)
         else:
             raise EvidenceError("SCHEMA_INVALID")
     check(value)
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    try:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    except (ValueError, UnicodeError, RecursionError):
+        raise EvidenceError("SCHEMA_INVALID") from None
 
 
 def digest(domain, value):
@@ -86,10 +92,12 @@ def source_from_db(path, source_id):
         with sqlite3.connect(uri, uri=True) as db:
             db.execute("PRAGMA query_only=ON")
             db.execute("BEGIN")
-            sizes = db.execute("SELECT length(CAST(payload AS BLOB)),length(CAST(manifest AS BLOB)) FROM historical_datasets WHERE id=?", (source_id,)).fetchone()
+            sizes = db.execute("SELECT length(CAST(payload AS BLOB)),length(CAST(manifest AS BLOB)),typeof(payload),typeof(manifest) FROM historical_datasets WHERE id=?", (source_id,)).fetchone()
             if sizes is None:
                 raise EvidenceError("SOURCE_NOT_FOUND")
-            if sum(sizes) > MAX_BYTES:
+            if sizes[2:] != ("text", "text") or any(type(size) is not int for size in sizes[:2]):
+                raise EvidenceError("SOURCE_UNVERIFIED")
+            if sum(sizes[:2]) > MAX_BYTES:
                 raise EvidenceError("SIZE_LIMIT")
             row = db.execute("SELECT id,payload,manifest FROM historical_datasets WHERE id=?", (source_id,)).fetchone()
             if row is None:
