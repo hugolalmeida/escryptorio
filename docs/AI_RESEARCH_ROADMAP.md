@@ -42,3 +42,8 @@ Capacidades observadas em [WINDOWS_ISOLATION_CAPABILITIES.md](WINDOWS_ISOLATION_
 # Prepara??o AppContainer ? 2.3D3A.2
 
 Etapa n?o persistente conclu?da como PREPARATION_COMPLETE_AWAITING_APPROVAL. DACLs sint?ticas s?o capturadas antes das altera??es e conferidas ap?s aplica??o. Lifecycle e evid?ncia fechada foram preparados com testes mockados. Perfil real permanece NOT_AUTHORIZED, sem adapter nativo ou execu??o de CreateAppContainerProfile. Erro 203 e runtime 0xC0000022 foram reproduzidos, com causas espec?ficas ainda n?o confirmadas. Plano e testes em [AI_APPCONTAINER_APPROVAL_PLAN.md](AI_APPCONTAINER_APPROVAL_PLAN.md), [AI_APPCONTAINER_COMPATIBILITY.md](AI_APPCONTAINER_COMPATIBILITY.md) e [AI_ISOLATION_COMPATIBILITY_TESTS.md](AI_ISOLATION_COMPATIBILITY_TESTS.md). ISOLATED_RESEARCH permanece indispon?vel.
+
+
+# Native lifecycle preparation 2.3D3A.3
+
+PREPARATION_COMPLETE_AWAITING_APPROVAL. Native read-only adapter and blocked mutation interfaces prepared. ProfileLifecycle supports an optional durable journal for synthetic tests. Recovery is inspection-only and uncertain ownership requires manual review. Reserved profile was absent in inspected storage/registry locations. No profile creation/deletion executed. See [native lifecycle](AI_APPCONTAINER_NATIVE_LIFECYCLE.md), [recovery](AI_APPCONTAINER_RECOVERY.md) and [authorized test plan](AI_APPCONTAINER_AUTHORIZED_TEST_PLAN.md). Filesystem/network enforcement remains NOT_VERIFIED; ISOLATED_RESEARCH remains unavailable.

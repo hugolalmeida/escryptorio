@@ -21,7 +21,7 @@ from .windows_native import (Native, WindowsErrorCode, PROCESS_INFORMATION, SECU
                              SECURITY_CAPABILITIES, SID_AND_ATTRIBUTES, STARTUPINFOEX)
 
 PROBES = {"normal", "token", "memory", "filesystem", "network", "descendant", "sleep",
-          "stdout", "stderr", "invalid_json", "forged_security", "exit", "mock"}
+          "stdout", "stderr", "invalid_json", "forged_security", "exit", "mock", "outputs"}
 
 
 @dataclass(frozen=True)

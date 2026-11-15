@@ -76,6 +76,14 @@ def main():
             result["list"] = 0
         except OSError as exc:
             result["list"] = exc.winerror
+    elif operation == "outputs":
+        try:
+            target = Path.cwd().parent / "outputs" / "synthetic-probe.txt"
+            target.write_bytes(b"synthetic-output")
+            result = {"outputs_write": "ACCESS_ALLOWED"}
+        except OSError as exc:
+            result = {"outputs_write": "ACCESS_DENIED_BY_OS" if exc.winerror == 5 else "PROBE_FAILED",
+                      "winerror": exc.winerror}
     elif operation == "network":
         # Both destinations are local synthetic listeners supplied by supervisor.
         for label, address in (("loopback", "127.0.0.1"), ("tcp_local", "127.0.0.1")):

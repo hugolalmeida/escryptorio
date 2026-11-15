@@ -53,6 +53,11 @@
 - Verificação posterior ao último reforço de rollback: arquivo Windows com 28 passed, um aviso preexistente, 11,79 s e saída 0. Instância com falha nativa de limpeza bloqueia novo launch e conserva ROLLBACK_INCOMPLETE após remoção da árvore. A falha de diretório possui retry de limpeza separado e testado.
 
 # 2.3D3A.2
-Baseline 7af1767 main limpa. Lifecycle inerte, contrato fechado e read-back de DACL preparados. Perfil NOT_AUTHORIZED. Diagn?sticos repetiram 203 e 0xC0000022, causas n?o confirmadas. Plano em docs/AI_APPCONTAINER_APPROVAL_PLAN.md. Pr?xima decis?o humana ? autorizar especificamente o perfil reservado. Replays 38/38, 14 legados e fingerprint preservados, sa?da 0. Baseline e resultados finais em docs/VERIFICATION.md.
+Baseline 7af1767 main limpa. Lifecycle inerte, contrato fechado e read-back de DACL preparados. Perfil NOT_AUTHORIZED. Diagnósticos repetiram 203 e 0xC0000022, causas não confirmadas. Plano em docs/AI_APPCONTAINER_APPROVAL_PLAN.md. Próxima decisão humana ? autorizar especificamente o perfil reservado. Replays 38/38, 14 legados e fingerprint preservados, saída 0. Baseline e resultados finais em docs/VERIFICATION.md.
 
-Baseline atual 455/1 skip, su?te posterior 470/1 skip, sa?das 0. Perfil real n?o criado. DACL capture em duas passagens verificada nos testes direcionados ap?s a su?te. Commit desta fase usa feat: prepare appcontainer isolation verification.
+Baseline atual 455/1 skip, suíte posterior 470/1 skip, saídas 0. Perfil real não criado. DACL capture em duas passagens verificada nos testes direcionados após a suíte. Commit desta fase usa feat: prepare appcontainer isolation verification.
+
+# 2.3D3A.3
+Baseline d50f932 main clean. Native adapter inspection only; create/delete blocked. Durable journal uses exclusive operation directory, fsync, replace and read-back. ProfileLifecycle accepts optional journal, recovery never deletes profiles. Profile absent in inspected locations. Stage G NOT_AUTHORIZED. Tests and replay results in docs/VERIFICATION.md. Commit subject feat: prepare native appcontainer lifecycle.
+
+Current verification: full suite 480 passed/1 skipped, 147.62 s, exit0; targeted53 passed, final targeted recorded in VERIFICATION. 38/38 replays and14 legacy preserved with temporary backup cleanup, exit0. No real profile mutation executed.

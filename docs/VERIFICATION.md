@@ -350,3 +350,21 @@ Etapa n?o persistente conclu?da como PREPARATION_COMPLETE_AWAITING_APPROVAL. DAC
 Baseline `.venv/Scripts/python -m pytest backend/tests -q` antes das altera??es teve 455 passed/1 skipped em 158,26 s, sa?da 0. Su?te posterior teve 470 passed/1 skipped em 145,99 s, sa?da 0. O skip de symlink e o aviso Starlette/httpx s?o preexistentes. A captura de ACLs em duas passagens foi ajustada ap?s iniciar essa su?te e foi verificada posteriormente no arquivo Windows junto aos testes de perfil. Diagn?stico e replays via stdin terminaram com sa?da 0 e REPLAY_CLEANUP_COMPLETE. `git diff --check` passou e o artefato %SystemDrive% permaneceu ausente.
 
 Execu??o direcionada final: Windows isolation + profile_plan, 43 passed, um aviso preexistente, 13,66 s, sa?da 0. Nenhum perfil real foi criado.
+
+
+# Native lifecycle preparation 2.3D3A.3
+
+PREPARATION_COMPLETE_AWAITING_APPROVAL. Native read-only adapter and blocked mutation interfaces prepared. ProfileLifecycle supports an optional durable journal for synthetic tests. Recovery is inspection-only and uncertain ownership requires manual review. Reserved profile was absent in inspected storage/registry locations. No profile creation/deletion executed. See [native lifecycle](AI_APPCONTAINER_NATIVE_LIFECYCLE.md), [recovery](AI_APPCONTAINER_RECOVERY.md) and [authorized test plan](AI_APPCONTAINER_AUTHORIZED_TEST_PLAN.md). Filesystem/network enforcement remains NOT_VERIFIED; ISOLATED_RESEARCH remains unavailable.
+
+
+# Verification 2.3D3A.3
+
+Baseline d50f93291477581a37b9cd2be3c1dfe1a1fc696e, main clean. `.venv/Scripts/python -m pytest backend/tests -q` completed with 480 passed, 1 skipped, one preexisting Starlette/httpx warning in 147.62 s, exit 0. The skip is the existing Windows symlink permission test. Initial journal/profile tests passed 25 cases in 0.53 s. Windows/profile/journal tests passed 53 cases in 15.01 s. Final SID-schema/read-back fault checks were added afterwards and verified in a subsequent targeted run recorded below.
+
+The first native read-only folder query returned HRESULT 0x80070002. The adapter now treats only FILE_NOT_FOUND/PATH_NOT_FOUND as absent storage and propagates other errors. Reinspection returned ABSENT_IN_INSPECTED_LOCATIONS for the exact reserved name, folder_present=False and mapping_present=False. No mutation API was invoked. This limited absence observation does not establish ownership or universal absence of residual state.
+
+A script via `.venv/Scripts/python -` opened the source database with mode=ro/query_only and backed it up to a temporary directory. All 38 replays, including 14 legacy runs, preserved IDs. Connections closed and cleanup completed with exit 0 and REPLAY_CLEANUP_COMPLETE. Fingerprint e3adfd0e20b3cdcad31a596ae3287aabeebcb65abc458f7541f23f063ecc3f62 was preserved. Existing synthetic database/bundle nonmutation tests were included in the full suite. Playwright/build/typecheck were omitted because the diff is backend/documentation only.
+
+Financial modules, migrations, endpoints, credentials and LLM integrations have zero changes. Real profiles/journals for profiles were not created. Native mutation methods remain blocked; profile storage and registry inspection was read-only. Journals in pytest were temporary synthetic artifacts. Windows Job and developer mock contracts remain intact. CPU/disk, network/filesystem enforcement and automatic real recovery remain unverified/deferred.
+
+Final targeted command `.venv/Scripts/python -m pytest backend/tests/test_profile_journal.py backend/tests/test_profile_plan.py backend/tests/test_windows_isolation.py -q`: 55 passed, one preexisting warning, 12.46 s, exit0. No real profile creation/deletion.

@@ -40,10 +40,23 @@ class SecurityEvidence(Closed):
 
 class ProfileLifecycle:
     """Models mock API transitions only. Native creation always fails closed."""
-    def __init__(self, policy=None):
+    def __init__(self, policy=None, journal=None):
         self.policy = policy or ProfilePolicy()
-        self.state = "PLANNED"
         self.owned_sid = None
+        self.journal = journal
+        self._state = "PLANNED"
+        if journal is not None and (journal.record.state != "PLANNED" or journal.record.policy_id != self.policy.policy_id):
+            raise EvidenceError("JOURNAL_IDENTITY_INVALID")
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        if self.journal is not None:
+            self.journal.transition(value, observed_sid=self.owned_sid)
+        self._state = value
 
     def create(self):
         raise EvidenceError("PROFILE_CREATION_REQUIRES_APPROVAL")
