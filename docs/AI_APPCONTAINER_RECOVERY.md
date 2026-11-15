@@ -48,3 +48,8 @@ Testes sintéticos cobrem lifecycle persistido, reinício/read-only, duplicaçã
 30. Human decision pending for Stage G creation/test/removal after plan and code review.
 
 Final targeted command `.venv/Scripts/python -m pytest backend/tests/test_profile_journal.py backend/tests/test_profile_plan.py backend/tests/test_windows_isolation.py -q`: 55 passed, one preexisting warning, 12.46 s, exit0. No real profile creation/deletion.
+
+
+# Runner preparation 2.3D3A.4
+
+PREPARATION_COMPLETE_AWAITING_APPROVAL. Closed runner policy/request and read-only approval manifest prepared. Native Win32 mutation bodies are disconnected from the operational adapter and exercised only through a synthetic API seam. execute_authorized_test always refuses. Mock end-to-end now binds operation/request to the durable journal, confirms runtime identity, runs fixture probes/gateway, stops resources and verifies profile/tree removal before CLEANED. Unexpected returned SID goes to manual review without deletion. See [runner](AI_APPCONTAINER_AUTHORIZED_TEST_RUNNER.md) and [approval manifest](AI_APPCONTAINER_APPROVAL_MANIFEST.md). Real filesystem/network containment remains NOT_VERIFIED.

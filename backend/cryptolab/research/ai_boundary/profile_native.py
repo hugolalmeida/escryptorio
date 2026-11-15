@@ -67,3 +67,59 @@ class NativeProfileAdapter:
 
     def verify_removal(self):
         return {**self.inspect_profile(), "removal_verification": "NOT_VERIFIED"}
+
+
+class PreparedNativeMutationContract:
+    """Exact Win32 call bodies disconnected from the native adapter.
+
+    Only a synthetic API object can construct this test seam. A future reviewed
+    operational bridge is required before using these bodies with userenv.dll.
+    """
+    synthetic_only = True
+
+    def __init__(self, api, expected_sid):
+        if getattr(api, "synthetic_only", False) is not True:
+            raise EvidenceError("PROFILE_CREATION_REQUIRES_APPROVAL")
+        self.api = api
+        self.expected_sid = expected_sid
+        self.owned_sid = None
+
+    def lookup(self, name):
+        if name != ProfilePolicy().name:
+            raise EvidenceError("PROFILE_IDENTITY_INVALID")
+        return self.api.lookup(name)
+
+    def create(self, name, capabilities):
+        if name != ProfilePolicy().name or capabilities != ():
+            raise EvidenceError("PROFILE_POLICY_INVALID")
+        if self.lookup(name) is not None:
+            raise EvidenceError("PROFILE_ALREADY_EXISTS")
+        sid = c.c_void_p()
+        try:
+            hr = self.api.CreateAppContainerProfile(name, name, "Escryptorio synthetic isolation test",
+                                                    None, 0, c.byref(sid))
+            if (hr & 0xffffffff) == 0x800700b7:
+                raise EvidenceError("PROFILE_ALREADY_EXISTS")
+            if hr != 0 or not sid.value:
+                raise WindowsErrorCode("CreateAppContainerProfile", hr & 0xffffffff)
+            text = self.api.sid_text(sid)
+            if text != self.expected_sid or self.lookup(name) != text:
+                raise EvidenceError("ROLLBACK_REQUIRES_MANUAL_REVIEW")
+            self.owned_sid = text
+            return text
+        finally:
+            if sid.value and self.api.FreeSid(sid):
+                raise EvidenceError("ROLLBACK_INCOMPLETE")
+
+    def stop_and_release(self):
+        self.api.stop_and_release()
+
+    def delete(self, name):
+        if self.owned_sid is None or self.lookup(name) != self.owned_sid:
+            raise EvidenceError("ROLLBACK_REQUIRES_MANUAL_REVIEW")
+        hr = self.api.DeleteAppContainerProfile(name)
+        if hr != 0:
+            raise WindowsErrorCode("DeleteAppContainerProfile", hr & 0xffffffff)
+        if self.lookup(name) is not None or self.api.verify_storage_absent(name) is not True:
+            raise EvidenceError("ROLLBACK_INCOMPLETE")
+        self.owned_sid = None

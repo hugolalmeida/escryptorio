@@ -73,7 +73,8 @@ class ProfileLifecycle:
         try:
             self.state = "CREATING"
             self.owned_sid = api.create(self.policy.name, self.policy.capabilities)
-            if not self.owned_sid or api.lookup(self.policy.name) != self.owned_sid:
+            if (not self.owned_sid or api.lookup(self.policy.name) != self.owned_sid
+                or self.journal is not None and self.owned_sid != self.journal.record.expected_sid):
                 self.state = "ROLLBACK_REQUIRES_MANUAL_REVIEW"
                 raise EvidenceError(self.state)
             self.state = "CREATED"

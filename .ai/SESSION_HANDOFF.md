@@ -53,7 +53,7 @@
 - Verificação posterior ao último reforço de rollback: arquivo Windows com 28 passed, um aviso preexistente, 11,79 s e saída 0. Instância com falha nativa de limpeza bloqueia novo launch e conserva ROLLBACK_INCOMPLETE após remoção da árvore. A falha de diretório possui retry de limpeza separado e testado.
 
 # 2.3D3A.2
-Baseline 7af1767 main limpa. Lifecycle inerte, contrato fechado e read-back de DACL preparados. Perfil NOT_AUTHORIZED. Diagnósticos repetiram 203 e 0xC0000022, causas não confirmadas. Plano em docs/AI_APPCONTAINER_APPROVAL_PLAN.md. Próxima decisão humana ? autorizar especificamente o perfil reservado. Replays 38/38, 14 legados e fingerprint preservados, saída 0. Baseline e resultados finais em docs/VERIFICATION.md.
+Baseline 7af1767 main limpa. Lifecycle inerte, contrato fechado e read-back de DACL preparados. Perfil NOT_AUTHORIZED. Diagnósticos repetiram 203 e 0xC0000022, causas não confirmadas. Plano em docs/AI_APPCONTAINER_APPROVAL_PLAN.md. Próxima decisão humana é autorizar especificamente o perfil reservado. Replays 38/38, 14 legados e fingerprint preservados, saída 0. Baseline e resultados finais em docs/VERIFICATION.md.
 
 Baseline atual 455/1 skip, suíte posterior 470/1 skip, saídas 0. Perfil real não criado. DACL capture em duas passagens verificada nos testes direcionados após a suíte. Commit desta fase usa feat: prepare appcontainer isolation verification.
 
@@ -61,3 +61,8 @@ Baseline atual 455/1 skip, suíte posterior 470/1 skip, saídas 0. Perfil real n
 Baseline d50f932 main clean. Native adapter inspection only; create/delete blocked. Durable journal uses exclusive operation directory, fsync, replace and read-back. ProfileLifecycle accepts optional journal, recovery never deletes profiles. Profile absent in inspected locations. Stage G NOT_AUTHORIZED. Tests and replay results in docs/VERIFICATION.md. Commit subject feat: prepare native appcontainer lifecycle.
 
 Current verification: full suite 480 passed/1 skipped, 147.62 s, exit0; targeted53 passed, final targeted recorded in VERIFICATION. 38/38 replays and14 legacy preserved with temporary backup cleanup, exit0. No real profile mutation executed.
+
+# 2.3D3A.4
+Baseline 1fd80d2 main clean. Runner preparation only, native execution unavailable. Added TestPolicy/TestRequest, read-only manifest and synthetic end-to-end; prepared DLL mutation call bodies gated to synthetic APIs. Fixed lifecycle SID mismatch cleanup before CREATED. Journal binds runner request in an exclusively-created fsynced manifest; CLEANED requires profile and tree verification. Stage G NOT_AUTHORIZED. Approval manifesto in docs/AI_APPCONTAINER_APPROVAL_MANIFEST.md. Full499/1skip, final targeted recorded in VERIFICATION;38/38 replays14legacy preserved, exit0. Commit subject feat: prepare authorized appcontainer test runner.
+
+Final verification:147 targeted passed in58.82s; after final tree-absence guard20 runner tests passed in1.51s. Full499/1skip preceded final targeted refinements. No real profile or journal for a real profile created.

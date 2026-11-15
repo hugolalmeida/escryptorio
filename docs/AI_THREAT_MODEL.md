@@ -36,3 +36,8 @@ Etapa n?o persistente conclu?da como PREPARATION_COMPLETE_AWAITING_APPROVAL. DAC
 # Native lifecycle preparation 2.3D3A.3
 
 PREPARATION_COMPLETE_AWAITING_APPROVAL. Native read-only adapter and blocked mutation interfaces prepared. ProfileLifecycle supports an optional durable journal for synthetic tests. Recovery is inspection-only and uncertain ownership requires manual review. Reserved profile was absent in inspected storage/registry locations. No profile creation/deletion executed. See [native lifecycle](AI_APPCONTAINER_NATIVE_LIFECYCLE.md), [recovery](AI_APPCONTAINER_RECOVERY.md) and [authorized test plan](AI_APPCONTAINER_AUTHORIZED_TEST_PLAN.md). Filesystem/network enforcement remains NOT_VERIFIED; ISOLATED_RESEARCH remains unavailable.
+
+
+# Runner preparation 2.3D3A.4
+
+PREPARATION_COMPLETE_AWAITING_APPROVAL. Closed runner policy/request and read-only approval manifest prepared. Native Win32 mutation bodies are disconnected from the operational adapter and exercised only through a synthetic API seam. execute_authorized_test always refuses. Mock end-to-end now binds operation/request to the durable journal, confirms runtime identity, runs fixture probes/gateway, stops resources and verifies profile/tree removal before CLEANED. Unexpected returned SID goes to manual review without deletion. See [runner](AI_APPCONTAINER_AUTHORIZED_TEST_RUNNER.md) and [approval manifest](AI_APPCONTAINER_APPROVAL_MANIFEST.md). Real filesystem/network containment remains NOT_VERIFIED.

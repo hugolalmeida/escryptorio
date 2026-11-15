@@ -368,3 +368,20 @@ A script via `.venv/Scripts/python -` opened the source database with mode=ro/qu
 Financial modules, migrations, endpoints, credentials and LLM integrations have zero changes. Real profiles/journals for profiles were not created. Native mutation methods remain blocked; profile storage and registry inspection was read-only. Journals in pytest were temporary synthetic artifacts. Windows Job and developer mock contracts remain intact. CPU/disk, network/filesystem enforcement and automatic real recovery remain unverified/deferred.
 
 Final targeted command `.venv/Scripts/python -m pytest backend/tests/test_profile_journal.py backend/tests/test_profile_plan.py backend/tests/test_windows_isolation.py -q`: 55 passed, one preexisting warning, 12.46 s, exit0. No real profile creation/deletion.
+
+
+# Runner preparation 2.3D3A.4
+
+PREPARATION_COMPLETE_AWAITING_APPROVAL. Closed runner policy/request and read-only approval manifest prepared. Native Win32 mutation bodies are disconnected from the operational adapter and exercised only through a synthetic API seam. execute_authorized_test always refuses. Mock end-to-end now binds operation/request to the durable journal, confirms runtime identity, runs fixture probes/gateway, stops resources and verifies profile/tree removal before CLEANED. Unexpected returned SID goes to manual review without deletion. See [runner](AI_APPCONTAINER_AUTHORIZED_TEST_RUNNER.md) and [approval manifest](AI_APPCONTAINER_APPROVAL_MANIFEST.md). Real filesystem/network containment remains NOT_VERIFIED.
+
+
+# Verification 2.3D3A.4
+
+Initial HEAD 1fd80d2be38282c9718fdefcfc5ee78b74db48ad, main clean. Full `.venv/Scripts/python -m pytest backend/tests -q` completed with 499 passed, 1 skipped, one preexisting Starlette/httpx warning, 141.40 s, exit0. The skip is the existing symlink creation test refused by Windows. The full run preceded final strict integer checks and two additional manifest/policy failure cases, verified by the subsequent targeted run. Initial runner/profile/journal tests passed44 in2.50s, exit0.
+
+Read-only prepare_authorized_test produced profile absence in inspected locations, empty capabilities, policy hash489b6c6abe0719cd8cc78a8cf18fbe1159235ed5be69dc72312f5359fc62258b and the proposed operation in the approval manifest. No real profile create/delete APIs were called. Native call bodies were exercised against FakeUserenv only. The initial request-manifest write uses exclusive creation, flush/fsync/read-back before any profile call. Partial or preexisting operation manifest blocks reuse and requires review.
+
+Replay verification used `.venv/Scripts/python -` with mode=ro/query_only origin and SQLite backup to a temporary directory. All38 IDs,14 legacy, preserved. Connections closed, cleanup completed with REPLAY_CLEANUP_COMPLETE and exit0. Fingerprint e3adfd0e20b3cdcad31a596ae3287aabeebcb65abc458f7541f23f063ecc3f62 preserved. Existing synthetic nonmutation tests were included. No financial module, migration, ledger, frontend, dependency or HTTP route changed. Playwright/build/typecheck omitted for backend/documentation scope. Filesystem/network proof, native runtime compatibility and real rollback remain NOT_VERIFIED. Profile storage and registry inspection was read-only; test journals were temporary synthetic data.
+
+
+Final targeted command `.venv/Scripts/python -m pytest backend/tests/test_authorized_runner.py backend/tests/test_profile_plan.py backend/tests/test_profile_journal.py backend/tests/test_windows_isolation.py backend/tests/test_ai_boundary.py -q` completed with147 passed, one preexisting warning,58.82s,exit0. A final explicit tree-absence confirmation guard and regression case followed; `test_authorized_runner.py -q` then passed20 tests in1.51s,exit0. A callback returning False cannot publish CLEANED. These final changes were verified by the targeted commands; the earlier full-suite count remains499/1skip.

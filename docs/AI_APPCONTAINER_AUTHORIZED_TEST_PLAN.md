@@ -19,3 +19,8 @@ Crash recovery começa pela inspeção read-only do journal e do estado externo.
 Evidências esperadas são identidade do processo, runtime funcional, códigos ACCESS_DENIED em tentativas explícitas, controles positivos, limites Job, integridade dos canários e ausência observável dos recursos. Recursos financeiros reais, credenciais e LLM ficam fora desse ensaio. D3B exige decisão separada.
 
 Aprovação específica solicitada em interação posterior para criar esse único perfil, executar o conjunto sintético em árvore própria com Job limitado e listener local, remover somente o perfil de ownership comprovado e verificar resíduos. Estado atual PROFILE_CREATION_REQUIRES_APPROVAL.
+
+
+# Runner preparation 2.3D3A.4
+
+PREPARATION_COMPLETE_AWAITING_APPROVAL. Closed runner policy/request and read-only approval manifest prepared. Native Win32 mutation bodies are disconnected from the operational adapter and exercised only through a synthetic API seam. execute_authorized_test always refuses. Mock end-to-end now binds operation/request to the durable journal, confirms runtime identity, runs fixture probes/gateway, stops resources and verifies profile/tree removal before CLEANED. Unexpected returned SID goes to manual review without deletion. See [runner](AI_APPCONTAINER_AUTHORIZED_TEST_RUNNER.md) and [approval manifest](AI_APPCONTAINER_APPROVAL_MANIFEST.md). Real filesystem/network containment remains NOT_VERIFIED.

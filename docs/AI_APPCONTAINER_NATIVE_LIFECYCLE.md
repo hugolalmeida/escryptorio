@@ -15,3 +15,8 @@ SecurityEvidence v1 foi preservado. Não se criou v2 porque os estados de recupe
 A revisão não confirmou a causa raiz do erro 203 nem do status 0xC0000022. Perfil ausente segue hipótese apoiada no fluxo documentado, e loader/DLL/desktop permanecem hipóteses sem prova. Python restrito, filesystem, loopback, DNS, TCP externo e IPC permanecem NOT_VERIFIED. Os controles Job anteriores são reexecutados nos testes existentes.
 
 Referências oficiais das assinaturas e regras de liberação. [CreateAppContainerProfile](https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-createappcontainerprofile), [DeleteAppContainerProfile](https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-deleteappcontainerprofile), [GetAppContainerFolderPath](https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-getappcontainerfolderpath).
+
+
+# Runner preparation 2.3D3A.4
+
+PREPARATION_COMPLETE_AWAITING_APPROVAL. Closed runner policy/request and read-only approval manifest prepared. Native Win32 mutation bodies are disconnected from the operational adapter and exercised only through a synthetic API seam. execute_authorized_test always refuses. Mock end-to-end now binds operation/request to the durable journal, confirms runtime identity, runs fixture probes/gateway, stops resources and verifies profile/tree removal before CLEANED. Unexpected returned SID goes to manual review without deletion. See [runner](AI_APPCONTAINER_AUTHORIZED_TEST_RUNNER.md) and [approval manifest](AI_APPCONTAINER_APPROVAL_MANIFEST.md). Real filesystem/network containment remains NOT_VERIFIED.
