@@ -60,7 +60,7 @@ class IsolationPolicy:
 
 class Child:
     """Owns native handles and converted CRT streams, including partial launches."""
-    def __init__(self, native):
+    def __init__(self, native, resources=None):
         self.native = native
         self.handles = []
         self.streams = []
@@ -70,13 +70,25 @@ class Child:
         self.assigned = False
         self.resumed = False
         self.exit_code = None
+        self.resources = resources
+        if resources is not None:
+            resources.bind_child(self)
 
     def own(self, handle):
+        if self.resources is not None:
+            self.resources.track(handle)
         self.handles.append(handle)
         return handle
 
     def close_handle(self, handle):
-        self.native.close(handle)
+        try:
+            self.native.close(handle)
+        except WindowsErrorCode:
+            if self.resources is not None:
+                self.resources.close_failed(handle)
+            raise
+        if self.resources is not None:
+            self.resources.closed(handle)
         self.handles.remove(handle)
 
     def adopt(self, info):
@@ -102,12 +114,18 @@ class Child:
             stream = os.fdopen(descriptor, mode, buffering=0)
         except BaseException:
             os.close(descriptor)
+            if self.resources is not None:
+                self.resources.closed(handle)
             raise
         self.streams.append(stream)
+        if self.resources is not None:
+            self.resources.transferred(handle, stream)
         return stream
 
     def launch(self, root, operation, job, sid, policy):
         n = self.native
+        if self.resources is not None:
+            self.resources.require_launch(root, job)
         parent_in, child_in = self.pipe(False)
         parent_out, child_out = self.pipe(True)
         parent_err, child_err = self.pipe(True)
@@ -214,6 +232,8 @@ class Child:
                 exit_code = w.DWORD()
                 self.native.check(self.native.kernel.GetExitCodeProcess(self.process, c.byref(exit_code)), "GetExitCodeProcess")
                 self.exit_code = exit_code.value
+                if self.resources is not None:
+                    self.resources.observe_process()
             except WindowsErrorCode as exc:
                 failures.append(exc.api)
         for stream in self.streams:
@@ -221,11 +241,15 @@ class Child:
                 stream.close()
             except OSError:
                 failures.append("CloseStream")
+                if self.resources is not None:
+                    self.resources.errors.add("CloseStream")
         for handle in list(reversed(self.handles)):
             try:
                 self.close_handle(handle)
             except WindowsErrorCode as exc:
                 failures.append(exc.api)
+        if self.resources is not None:
+            self.resources.handles_released()
         return failures
 
 

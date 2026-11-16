@@ -16,7 +16,7 @@ class ResourceObservations(Closed):
     policy_id: Hash
     ownership_token: Hash
     expected_sid: str
-    ownership_confirmed: bool = False
+    ownership_confirmed: bool | None = None
     delete_succeeded: bool | None = None
     process_stopped: bool | None = None
     job_empty: bool | None = None
@@ -39,7 +39,7 @@ class RemovalResult(Closed):
     details: tuple[str, ...] = ()
 
 
-def verify_removal(journal, resources: ResourceObservations, inspector) -> RemovalResult:
+def verify_removal(journal, resources: ResourceObservations, inspector, *, collector=None) -> RemovalResult:
     """No deletes, enumeration, process kills, writes, or retries.
 
     Exact registry/API storage queries are supplied by NativeProfileAdapter in
@@ -61,11 +61,19 @@ def verify_removal(journal, resources: ResourceObservations, inspector) -> Remov
             or record.policy_id != ProfilePolicy().policy_id
             or record.expected_sid != resources.expected_sid
             or record.observed_sid != resources.expected_sid
-            or not resources.ownership_confirmed or record.state not in ("CLEANING", "CLEANED")):
+            or record.state not in ("CLEANING", "CLEANED")):
             return result("VERIFICATION_ERROR", "OWNERSHIP_OR_JOURNAL_CONFLICT")
         if resources.source == "SUPERVISOR_READ_ONLY":
             from .journal_security import validate_journal_preflight
             validate_journal_preflight(journal)
+            from .os_receipts import OperationResources
+            if type(collector) is not OperationResources:
+                return result("VERIFICATION_UNAVAILABLE", "SUPERVISOR_RECEIPT_REQUIRED")
+            collector.require_receipt(resources, journal, consume=True)
+        if resources.ownership_confirmed is None:
+            return result("VERIFICATION_UNAVAILABLE", "PROFILE_OWNERSHIP_NOT_VERIFIED")
+        if resources.ownership_confirmed is not True:
+            return result("VERIFICATION_ERROR", "OWNERSHIP_OR_JOURNAL_CONFLICT")
         inspection = inspector.inspect_profile()
         if (inspection["profile_name"] != PROFILE_NAME
             or inspection["expected_sid"] != resources.expected_sid

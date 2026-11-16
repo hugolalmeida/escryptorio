@@ -1,4 +1,8 @@
-# Estado atual · 2.3D3A.4-GATE
+# Estado atual · 2.3D3A.4-BRIDGE
+
+Bridge tipado, fachada DLL desconectada, coletores supervisor-owned e pinning do journal implementados. [Bridge](AI_APPCONTAINER_NATIVE_BRIDGE.md) e [OS receipts](AI_APPCONTAINER_OS_RECEIPTS.md) distinguem recursos Win32 comprovados de perfil mock. Nenhum perfil real criado/excluído, nenhum executor habilitado, nenhuma prova de negação de FS/rede AppContainer. Recibos de perfil real ficam NONE/NOT_VERIFIED. DEVELOPMENT_MOCK continua NOT_SANDBOXED, ISOLATED_RESEARCH_UNAVAILABLE. Revisão humana do bridge não significa ISOLATION_VERIFIED e não autoriza D3B.
+
+# Estado anterior · 2.3D3A.4-GATE
 
 **PREFLIGHT_PARTIAL / NOT_AUTHORIZED.** DEVELOPMENT_MOCK permanece NOT_SANDBOXED; ISOLATED_RESEARCH retorna ISOLATED_RESEARCH_UNAVAILABLE. Guard Win32 de journal validado em fixtures descartáveis; verificador independente read-only e gates sintéticos de rollback implementados. Bridge e coletores de recursos nativos DEFERRED. Nenhum perfil real criado/excluído, nenhuma prova de filesystem/network do AppContainer. Controles Job anteriores preservados e reexecutados, sem promover os mocks a enforcement. [Preflight final](AI_APPCONTAINER_FINAL_PREFLIGHT.md).
 

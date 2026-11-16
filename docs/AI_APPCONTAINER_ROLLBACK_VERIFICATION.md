@@ -1,3 +1,7 @@
+# Atualização · 2.3D3A.4-BRIDGE
+
+O coletor [OperationResources](AI_APPCONTAINER_OS_RECEIPTS.md) agora emite recibos reais de processo/Job/handles conhecidos/diretórios, vinculados à operação, versão e geração. Para SUPERVISOR_READ_ONLY o verificador exige a própria instância de recibo emitida pelo coletor correspondente e a consome; cópia, recibo estrangeiro ou antigo são recusados. Dados de worker nunca alimentam esse caminho. Ownership desconhecido é NONE e devolve VERIFICATION_UNAVAILABLE; nada completa esse campo com True para um perfil não criado. NativeProfileBridge prepara Delete somente após recibos obrigatórios; S_OK com verificação suficiente pode confirmar Delete, falha/resíduo confirmado é False, resposta perdida é None. O bridge não publica CLEANED. Perfil mock mantém TESTED_MOCK no agregado. Todas as mutações reais continuam não autorizadas, mesmo com os recursos benignos comprovados. [Bridge](AI_APPCONTAINER_NATIVE_BRIDGE.md) registra pinning, recuperação e riscos atuais; o texto abaixo preserva o estado anterior.
+
 # Verificação de rollback · 2.3D3A.4-GATE
 
 **PREPARED_NOT_EXECUTED / NOT_AUTHORIZED** para rollback real. `rollback_verification.py` não chama Delete, não escreve no journal, não mata processos, não enumera perfis e não remove diretórios. O supervisor consulta o mapeamento HKCU exato do SID e o storage retornado pela API. Derivar SID não demonstra existência.

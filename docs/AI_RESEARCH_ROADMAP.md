@@ -1,4 +1,8 @@
-# Gate atual · 2.3D3A.4-GATE
+# Etapa atual · 2.3D3A.4-BRIDGE
+
+Implementação do bridge/fachada, recibos Windows e pinning do journal entregues para revisão; classificação final em [Native bridge](AI_APPCONTAINER_NATIVE_BRIDGE.md). A próxima decisão humana é revisar commit/riscos e decidir separadamente sobre eventual conexão e ensaio com perfil/política exatos e rollback revisado. Executor permanece bloqueado, nenhum perfil real criado/excluído, D3B/LLM/trading fora do escopo. Recibos de ownership/Delete reais e fronteiras FS/rede continuam não comprovados. Resultados de fases anteriores abaixo são históricos e não substituem os desta entrega.
+
+# Gate anterior · 2.3D3A.4-GATE
 
 **PREFLIGHT_PARTIAL**, sem início de D3B. [Preflight final](AI_APPCONTAINER_FINAL_PREFLIGHT.md) registra preparação e pendências. Próxima decisão humana: revisar o commit e definir tarefa para completar/revisar o port operacional e os coletores de recibos, ainda desconectados. Conectar o bridge ou executar ensaio real exige commit revisado, aprovação específica com perfil/política/rollback e outra tarefa. Nenhum manifesto, variável ou mock concede essa autorização. Runtime restrito, FS/rede, CPU/disco e rollback real continuam não comprovados. Nenhuma LLM ou integração financeira adicionada.
 

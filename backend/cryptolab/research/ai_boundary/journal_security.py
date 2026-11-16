@@ -4,6 +4,7 @@ This is a supervisor check, not an authorization source or protection from a
 malicious process running as the supervisor. No profile API is used here.
 """
 import ctypes as c
+from contextlib import contextmanager
 from pathlib import Path
 
 from .windows_native import Native, SID_AND_ATTRIBUTES
@@ -45,6 +46,7 @@ class WindowsJournalSecurity:
             self.native.close(token)
         self.sddl = f"D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;{self.owner})"
         self.identity = self._identity(self.root)
+        self.native_identity = None
         self.check(self.root)
 
     @staticmethod
@@ -53,23 +55,36 @@ class WindowsJournalSecurity:
         return info.st_dev, info.st_ino
 
     def check(self, path):
-        path = Path(path)
-        reject_redirects(path)
-        if not path.is_relative_to(self.root) or self._identity(self.root) != self.identity:
-            raise EvidenceError("JOURNAL_SECURITY_NOT_VERIFIED")
-        for item in (self.root, *reversed(path.relative_to(self.root).parents[:-1]), path):
-            # Relative intermediate parents are resolved beneath the frozen root.
-            item = item if item.is_absolute() else self.root / item
-            self._check_descriptor(item)
-        if path.is_file() and path.stat().st_nlink != 1:
-            raise EvidenceError("JOURNAL_SECURITY_NOT_VERIFIED")
+        with self.pin(path):
+            pass
 
-    def _check_descriptor(self, path):
+    @contextmanager
+    def pin(self, *paths, allow_delete_files=False):
+        from .windows_paths import pinned_paths
+        paths = tuple(Path(path) for path in paths)
+        if any(not path.is_relative_to(self.root) for path in paths):
+            raise EvidenceError("JOURNAL_SECURITY_NOT_VERIFIED")
+        with pinned_paths(self.native, paths, allow_delete_files=allow_delete_files) as held:
+            root_identity = held[self.root][1]
+            if self.native_identity is None:
+                self.native_identity = root_identity
+            if root_identity != self.native_identity or self._identity(self.root) != self.identity:
+                raise EvidenceError("JOURNAL_SECURITY_NOT_VERIFIED")
+            for item, (handle, _) in held.items():
+                if item.is_relative_to(self.root):
+                    self._check_descriptor(item, handle)
+            yield held
+            for item, (handle, _) in held.items():
+                if item.is_relative_to(self.root):
+                    self._check_descriptor(item, handle)
+
+    def _check_descriptor(self, path, handle=None):
         n = self.native
-        attrs = n.kernel.GetFileAttributesW(str(path))
+        attrs = (n.file_handle_info(handle)[1] if handle is not None
+                 else n.kernel.GetFileAttributesW(str(path)))
         if attrs == 0xffffffff or attrs & 0x400:
             raise EvidenceError("JOURNAL_SECURITY_NOT_VERIFIED")
-        descriptor = n.file_security(path, 5)  # OWNER + DACL, never SACL.
+        descriptor = n.handle_security(handle) if handle is not None else n.file_security(path, 5)
         owner, control = n.security_owner_control(descriptor)
         if owner != self.owner or not control & 0x1000:  # SE_DACL_PROTECTED
             raise EvidenceError("JOURNAL_SECURITY_NOT_VERIFIED")
@@ -94,7 +109,14 @@ class WindowsJournalSecurity:
             or (path.is_file() and (path.stat().st_size or path.stat().st_nlink != 1))):
             raise EvidenceError("JOURNAL_SECURITY_NOT_VERIFIED")
         self.native.apply_dacl(path, self.sddl)
-        self.check(path)
+        if path.is_dir():
+            self.check(path)
+        else:
+            # The exclusive CRT writer is still open. A GENERIC_READ pin that
+            # denies writes would conflict with our own writer. Verify its DACL
+            # now; Journal compares the writer handle's File ID after close.
+            reject_redirects(path)
+            self._check_descriptor(path)
 
 
 def validate_journal_preflight(journal):

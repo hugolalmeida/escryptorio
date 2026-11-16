@@ -1,3 +1,7 @@
+# Atualização · 2.3D3A.4-BRIDGE
+
+As lacunas técnicas de bridge, coletores e pinning foram implementadas nesta fase; a classificação final e os limites atuais estão em [Native bridge](AI_APPCONTAINER_NATIVE_BRIDGE.md) e [OS receipts](AI_APPCONTAINER_OS_RECEIPTS.md). O PREFLIGHT_PARTIAL abaixo é histórico. NativeProfileBridge implementa o port com NativeProfileCalls preparada e API ausente por padrão; nenhum runner o instancia/conecta. Create/Delete reais permanecem NOT_AUTHORIZED. Processo/Job/handles/diretórios foram observados no Windows com Child/Jobs benignos; ownership/Delete reais permanecem NONE/NOT_VERIFIED. Journal usa handles, SD por handle, caminhos finais e File IDs/volume, com mitigação e falha fechada nas divergências, sem garantia universal contra TOCTOU ou escritor do mesmo usuário/SYSTEM. Raiz persistente LOCALAPPDATA não criada. ISOLATED_RESEARCH indisponível, FS/rede não comprovados. Resultados desta fase em [VERIFICATION](VERIFICATION.md).
+
 # Final preflight · 2.3D3A.4-GATE
 
 **PREFLIGHT_PARTIAL — NOT_AUTHORIZED.** Preparação revisável, sem ensaio real. Este registro substitui a interpretação de prontidão da fase anterior; preserva seus resultados como histórico. `ISOLATED_RESEARCH_UNAVAILABLE`, `DEVELOPMENT_MOCK=NOT_SANDBOXED`, filesystem/network `NOT_VERIFIED`.

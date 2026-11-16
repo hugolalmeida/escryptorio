@@ -1,8 +1,8 @@
-"""Native read-only adapter. Persistent calls have no operational entry point."""
+"""Native inspection and prepared DLL facade; normal runner mutations stay blocked."""
 import ctypes as c
 from ctypes import wintypes as w
 from pathlib import Path
-from typing import Protocol
+from typing import Literal, Protocol
 
 from .profile_plan import ProfilePolicy
 from .profile_journal import Record
@@ -79,33 +79,40 @@ class NativeProfileAdapter:
     def verify_profile(self):
         return self.inspect_profile()
 
-    def verify_removal(self, journal, resources):
+    def verify_removal(self, journal, resources, *, collector=None):
         from .rollback_verification import verify_removal
-        return verify_removal(journal, resources, self)
+        return verify_removal(journal, resources, self, collector=collector)
 
 
 class ProfileOperationPort(Protocol):
-    """Future supervisor port; deliberately no implementation using native DLLs.
+    """Supervisor port; NativeProfileBridge is prepared but never wired by a runner.
 
     Ownership combines a live S_OK Create receipt with the durable operation;
     neither name, derived SID nor a recovery journal can reconstruct that receipt.
-    The next reviewed bridge must also collect handle/Job/storage observations.
+    Future wiring must consume supervisor-owned handle/Job/storage observations.
     """
     def create_owned(self, operation: Record) -> str: ...
     def delete_owned(self, operation: Record) -> None: ...
 
 
-class PreparedNativeMutationContract:
-    """Exact Win32 call bodies disconnected from the native adapter.
+class ProfileCallAPI(Protocol):
+    """Code-injected dependency. No native implementation/factory is connected."""
+    provenance: Literal["TESTED_MOCK", "NATIVE_USERENV"]
+    def discovery(self) -> dict: ...
+    def lookup(self, name: str) -> str | None: ...
+    def inspect_profile(self) -> dict: ...
+    def sid_text(self, sid: c.c_void_p) -> str: ...
+    def FreeSid(self, sid: c.c_void_p) -> int | None: ...
+    def CreateAppContainerProfile(self, name: str, display: str, description: str,
+                                  capabilities: None, count: int, output: object) -> int: ...
+    def DeleteAppContainerProfile(self, name: str) -> int: ...
+    def verify_storage_absent(self, name: str) -> bool: ...
+    def stop_and_release(self) -> None: ...
 
-    Only a synthetic API object can construct this test seam. A future reviewed
-    operational bridge is required before using these bodies with userenv.dll.
-    """
-    synthetic_only = True
 
-    def __init__(self, api, expected_sid: str):
-        if getattr(api, "synthetic_only", False) is not True:
-            raise EvidenceError("PROFILE_CREATION_REQUIRES_APPROVAL")
+class _ProfileMutationCalls:
+    """Shared, injection-only call bodies; no DLL loading or production factory."""
+    def __init__(self, api: ProfileCallAPI, expected_sid: str):
         # Reuse the strict SID grammar; no optional/implicit expected identity.
         Record(operation_id="0" * 64, policy_id=ProfilePolicy().policy_id,
                ownership_token="0" * 64, expected_sid=expected_sid,
@@ -113,6 +120,7 @@ class PreparedNativeMutationContract:
         self.api = api
         self.expected_sid = expected_sid
         self.owned_sid = None
+        self.last_delete_hresult = None
 
     def lookup(self, name):
         if name != ProfilePolicy().name:
@@ -151,8 +159,71 @@ class PreparedNativeMutationContract:
         if name != ProfilePolicy().name or self.owned_sid is None or self.lookup(name) != self.owned_sid:
             raise EvidenceError("ROLLBACK_REQUIRES_MANUAL_REVIEW")
         hr = self.api.DeleteAppContainerProfile(name)
+        self.last_delete_hresult = hr
         if hr != 0:
             raise WindowsErrorCode("DeleteAppContainerProfile", hr & 0xffffffff)
         if self.lookup(name) is not None or self.api.verify_storage_absent(name) is not True:
             raise EvidenceError("ROLLBACK_INCOMPLETE")
         self.owned_sid = None
+
+
+class NativeProfileCalls:
+    """Prepared DLL facade. NO production factory, CLI, or runner constructs it.
+
+    Deliberately distinct from the legacy synthetic seam. Instantiation only
+    binds DLLs; using this facade for mutation needs a future reviewed code
+    connection and specific human authorization. Python access modifiers are
+    not a boundary against arbitrary host code running as the user.
+    """
+    provenance: Literal["NATIVE_USERENV"] = "NATIVE_USERENV"
+
+    def __init__(self):
+        self.adapter = NativeProfileAdapter()
+
+    def discovery(self) -> dict:
+        return self.adapter.native.discovery()
+
+    def inspect_profile(self) -> dict:
+        return self.adapter.inspect_profile()
+
+    def lookup(self, name: str) -> str | None:
+        if name != ProfilePolicy().name:
+            raise EvidenceError("PROFILE_IDENTITY_INVALID")
+        result = self.inspect_profile()
+        return result["expected_sid"] if result["mapping_present"] or result["folder_present"] else None
+
+    def sid_text(self, sid: c.c_void_p) -> str:
+        return self.adapter.native.sid_text(sid)
+
+    def FreeSid(self, sid: c.c_void_p) -> int | None:
+        return self.adapter.native.advapi.FreeSid(sid)
+
+    def CreateAppContainerProfile(self, name: str, display: str, description: str,
+                                  capabilities: None, count: int, output: object) -> int:
+        if name != ProfilePolicy().name or capabilities is not None or type(count) is not int or count != 0:
+            raise EvidenceError("PROFILE_POLICY_INVALID")
+        return self.adapter.native.userenv.CreateAppContainerProfile(name, display, description, None, 0, output)
+
+    def DeleteAppContainerProfile(self, name: str) -> int:
+        if name != ProfilePolicy().name:
+            raise EvidenceError("PROFILE_IDENTITY_INVALID")
+        return self.adapter.native.userenv.DeleteAppContainerProfile(name)
+
+    def verify_storage_absent(self, name: str) -> bool:
+        if name != ProfilePolicy().name:
+            raise EvidenceError("PROFILE_IDENTITY_INVALID")
+        result = self.inspect_profile()
+        return result["mapping_present"] is False and result["folder_present"] is False
+
+    def stop_and_release(self) -> None:
+        raise EvidenceError("SUPERVISOR_RESOURCE_RECEIPTS_REQUIRED")
+
+
+class PreparedNativeMutationContract(_ProfileMutationCalls):
+    """Legacy mock seam. Marker is a convention, never native authorization."""
+    synthetic_only = True
+
+    def __init__(self, api, expected_sid: str):
+        if getattr(api, "synthetic_only", False) is not True:
+            raise EvidenceError("PROFILE_CREATION_REQUIRES_APPROVAL")
+        super().__init__(api, expected_sid)

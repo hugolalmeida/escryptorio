@@ -69,6 +69,17 @@ class SID_AND_ATTRIBUTES(c.Structure):
     _fields_ = [("Sid", c.c_void_p), ("Attributes", w.DWORD)]
 
 
+class BY_HANDLE_FILE_INFORMATION(c.Structure):
+    _fields_ = [("attributes", w.DWORD), ("created", w.FILETIME),
+                ("accessed", w.FILETIME), ("written", w.FILETIME),
+                ("volume", w.DWORD), ("size_high", w.DWORD), ("size_low", w.DWORD),
+                ("links", w.DWORD), ("index_high", w.DWORD), ("index_low", w.DWORD)]
+
+
+class FILE_ID_INFO(c.Structure):
+    _fields_ = [("volume", c.c_uint64), ("identifier", c.c_ubyte * 16)]
+
+
 class Native:
     def __init__(self):
         if os.name != "nt" or c.sizeof(c.c_void_p) != 8:
@@ -76,7 +87,8 @@ class Native:
         for structure, size in ((BASIC_LIMIT, 64), (EXTENDED_LIMIT, 144), (STARTUPINFO, 104),
                                 (STARTUPINFOEX, 112), (PROCESS_INFORMATION, 24),
                                 (SECURITY_ATTRIBUTES, 24), (SECURITY_CAPABILITIES, 24),
-                                (ACCOUNTING, 48), (SID_AND_ATTRIBUTES, 16), (IO_COUNTERS, 48)):
+                                (ACCOUNTING, 48), (SID_AND_ATTRIBUTES, 16), (IO_COUNTERS, 48),
+                                (BY_HANDLE_FILE_INFORMATION, 52), (FILE_ID_INFO, 24)):
             if c.sizeof(structure) != size:
                 raise WindowsErrorCode("STRUCTURE_SIZE_INVALID", 0)
         self.kernel = c.WinDLL("kernel32", use_last_error=True)
@@ -92,6 +104,13 @@ class Native:
         self._function(self.kernel, "LocalFree", [pointer], pointer)
         self._function(self.kernel, "GetFileAttributesW", [w.LPCWSTR], w.DWORD)
         self._function(self.kernel, "GetDriveTypeW", [w.LPCWSTR], w.UINT)
+        self._function(self.kernel, "CreateFileW", [w.LPCWSTR, w.DWORD, w.DWORD, pointer,
+                       w.DWORD, w.DWORD, w.HANDLE], w.HANDLE)
+        self._function(self.kernel, "GetFileInformationByHandle", [w.HANDLE, c.POINTER(BY_HANDLE_FILE_INFORMATION)], w.BOOL)
+        self._function(self.kernel, "GetFileInformationByHandleEx", [w.HANDLE, c.c_int, pointer, w.DWORD], w.BOOL)
+        self._function(self.kernel, "GetFinalPathNameByHandleW", [w.HANDLE, w.LPWSTR, w.DWORD, w.DWORD], w.DWORD)
+        self._function(self.kernel, "GetHandleInformation", [w.HANDLE, c.POINTER(w.DWORD)], w.BOOL)
+        self._function(self.advapi, "GetKernelObjectSecurity", [w.HANDLE, w.DWORD, pointer, w.DWORD, c.POINTER(w.DWORD)], w.BOOL)
         self._function(self.kernel, "CreateJobObjectW", [pointer, w.LPCWSTR], w.HANDLE)
         self._function(self.kernel, "SetInformationJobObject", [w.HANDLE, c.c_int, pointer, w.DWORD], w.BOOL)
         self._function(self.kernel, "QueryInformationJobObject", [w.HANDLE, c.c_int, pointer, w.DWORD, pointer], w.BOOL)
@@ -187,6 +206,44 @@ class Native:
         if not owner.value or defaulted.value:
             raise WindowsErrorCode("JOURNAL_SECURITY_NOT_VERIFIED", 0)
         return self.sid_text(owner), control.value
+
+    def metadata_handle(self, path, *, directory, allow_delete=False):
+        # OPEN_EXISTING; GENERIC_READ also participates in sharing checks.
+        # Metadata-only access does NOT exclude concurrent data writers.
+        # Directories deny delete sharing. Files deny write and, normally, delete.
+        sharing = 3 if directory else (5 if allow_delete else 1)
+        handle = self.kernel.CreateFileW(str(path), 0x80020080, sharing, None, 3,
+                                         0x02200000, None)  # BACKUP_SEMANTICS | OPEN_REPARSE_POINT
+        if handle == c.c_void_p(-1).value or handle is None:
+            raise WindowsErrorCode("CreateFileMetadata")
+        return handle
+
+    def file_handle_info(self, handle):
+        basic, identity = BY_HANDLE_FILE_INFORMATION(), FILE_ID_INFO()
+        self.check(self.kernel.GetFileInformationByHandle(handle, c.byref(basic)), "GetFileInformationByHandle")
+        self.check(self.kernel.GetFileInformationByHandleEx(handle, 18, c.byref(identity), c.sizeof(identity)), "GetFileInformationByHandleEx")
+        return (identity.volume, bytes(identity.identifier)), basic.attributes, basic.links
+
+    def final_path(self, handle):
+        buffer = c.create_unicode_buffer(512)
+        length = self.kernel.GetFinalPathNameByHandleW(handle, buffer, len(buffer), 0)
+        if length >= len(buffer):
+            if length > 32767:
+                raise WindowsErrorCode("FINAL_PATH_LIMIT", 0)
+            buffer = c.create_unicode_buffer(length + 1)
+            length = self.kernel.GetFinalPathNameByHandleW(handle, buffer, len(buffer), 0)
+        if not length or length >= len(buffer):
+            raise WindowsErrorCode("GetFinalPathNameByHandleW")
+        return buffer.value
+
+    def handle_security(self, handle):
+        length = w.DWORD()
+        result = self.advapi.GetKernelObjectSecurity(handle, 5, None, 0, c.byref(length))
+        if result or c.get_last_error() != 122 or not 0 < length.value <= 65536:
+            raise WindowsErrorCode("GetKernelObjectSecuritySize")
+        buffer = c.create_string_buffer(length.value)
+        self.check(self.advapi.GetKernelObjectSecurity(handle, 5, buffer, len(buffer), c.byref(length)), "GetKernelObjectSecurity")
+        return buffer
 
     def dacl_bytes(self, descriptor):
         present, defaulted, acl = w.BOOL(), w.BOOL(), c.c_void_p()

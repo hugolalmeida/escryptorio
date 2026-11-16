@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import threading
 import time
+from contextlib import nullcontext
 from typing import Literal
 
 from pydantic import Field
@@ -58,14 +59,16 @@ class Journal:
                 raise EvidenceError("JOURNAL_SECURITY_NOT_VERIFIED")
             security.check(root)
         self.root = root / record.operation_id
-        self.root.mkdir()  # Exclusive ownership; never reuse an existing operation.
-        if security is not None:
-            security.protect_new(self.root)
+        with self.pin(root):
+            self.root.mkdir()  # Exclusive ownership; never reuse an existing operation.
+            if security is not None:
+                security.protect_new(self.root)
         self.path = self.root / "journal.json"
         self.record = record
         self._lock = threading.Lock()
         self.failed = False
         self._published_identity = None
+        self._published_file_id = None
         self._publish(record)
 
     def check_path(self, path):
@@ -73,26 +76,56 @@ class Journal:
         if self.security is not None:
             self.security.check(path)
 
+    def pin(self, *paths, allow_delete_files=False):
+        return (self.security.pin(*paths, allow_delete_files=allow_delete_files)
+                if self.security is not None else nullcontext({}))
+
     def write_exclusive(self, path, raw):
         """Protected, exclusive runner manifest; failure permanently poisons session."""
+        try:
+            with self.pin(self.root):
+                self._write_exclusive_pinned(path, raw)
+        except BaseException:
+            self.failed = True
+            raise
+
+    def _write_exclusive_pinned(self, path, raw):
         try:
             if path != self.root / "runner-request.json" or self.failed:
                 raise EvidenceError("JOURNAL_REQUIRES_MANUAL_REVIEW")
             self.check_path(self.root)
             with path.open("xb") as stream:
+                created_identity = self._writer_identity(stream)
                 if self.security is not None:
                     self.security.protect_new(path)
                 stream.write(raw)
                 stream.flush()
                 os.fsync(stream.fileno())
-            self.check_path(path)
-            if path.read_bytes() != raw:
-                raise EvidenceError("RUNNER_MANIFEST_READBACK_FAILED")
+            with self.pin(path) as held:
+                if created_identity is not None and held[path][1] != created_identity:
+                    raise EvidenceError("JOURNAL_REPLACED")
+                self.check_path(path)
+                if path.read_bytes() != raw:
+                    raise EvidenceError("RUNNER_MANIFEST_READBACK_FAILED")
         except BaseException:
             self.failed = True
             raise
 
+    def _writer_identity(self, stream):
+        if self.security is None:
+            return None
+        import msvcrt
+        return self.security.native.file_handle_info(msvcrt.get_osfhandle(stream.fileno()))[0]
+
     def _publish(self, record):
+        try:
+            with self.pin(self.root):
+                self._publish_pinned(record)
+        except BaseException:
+            self.failed = True
+            raise
+
+    def _publish_pinned(self, record):
         body = record.model_dump(mode="json")
         raw = canonical({"record": body, "hash": digest("escryptorio:profile-journal:v1", body)})
         name = None
@@ -100,6 +133,7 @@ class Journal:
             self.check_path(self.root)
             with tempfile.NamedTemporaryFile(dir=self.root, delete=False) as stream:
                 name = stream.name
+                created_identity = self._writer_identity(stream)
                 if self.security is not None:
                     self.security.protect_new(Path(name))
                 stream.write(raw)
@@ -108,12 +142,23 @@ class Journal:
             self.check_path(Path(name))
             if self.path.exists():
                 self.check_path(self.path)
-            os.replace(name, self.path)
-            self.check_path(self.path)
-            if read_record(self.path, record.operation_id, record.ownership_token) != record:
-                raise EvidenceError("JOURNAL_READBACK_FAILED")
-            info = self.path.stat()
+            with self.pin(Path(name), allow_delete_files=True) as held:
+                expected_identity = held.get(Path(name), (None, None))[1]
+                if created_identity is not None and expected_identity != created_identity:
+                    raise EvidenceError("JOURNAL_REPLACED")
+                if self.security is not None and self._published_identity is not None:
+                    self._read_current()
+                os.replace(name, self.path)
+                with self.pin(self.path) as published:
+                    if expected_identity is not None and published[self.path][1] != expected_identity:
+                        raise EvidenceError("JOURNAL_REPLACED")
+                    self.check_path(self.path)
+                    if read_record(self.path, record.operation_id, record.ownership_token) != record:
+                        raise EvidenceError("JOURNAL_READBACK_FAILED")
+                    info = self.path.stat()
+                    published_id = published.get(self.path, (None, None))[1]
             self._published_identity = (info.st_dev, info.st_ino)
+            self._published_file_id = published_id
         except BaseException:
             self.failed = True
             raise
@@ -122,18 +167,25 @@ class Journal:
                 self.check_path(Path(name))
                 Path(name).unlink()
 
+    def _read_current(self):
+        with self.pin(self.path) as held:
+            self.check_path(self.path)
+            info = self.path.stat()
+            if (info.st_dev, info.st_ino) != self._published_identity:
+                raise EvidenceError("JOURNAL_REPLACED")
+            if self._published_file_id is not None and held[self.path][1] != self._published_file_id:
+                raise EvidenceError("JOURNAL_REPLACED")
+            current = read_record(self.path, self.record.operation_id, self.record.ownership_token)
+            if current != self.record:
+                raise EvidenceError("JOURNAL_TRANSITION_INVALID")
+            return current
+
     def transition(self, state, observed_sid=None, *, cleanup_result=None):
         with self._lock:
             if self.failed:
                 raise EvidenceError("JOURNAL_REQUIRES_MANUAL_REVIEW")
             try:
-                self.check_path(self.path)
-                info = self.path.stat()
-                if (info.st_dev, info.st_ino) != self._published_identity:
-                    raise EvidenceError("JOURNAL_REPLACED")
-                current = read_record(self.path, self.record.operation_id, self.record.ownership_token)
-                if current != self.record:
-                    raise EvidenceError("JOURNAL_TRANSITION_INVALID")
+                current = self._read_current()
             except BaseException:
                 self.failed = True
                 raise
